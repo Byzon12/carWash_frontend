@@ -17,7 +17,7 @@ class LoginAndSignupBtn extends StatelessWidget {
           content: SingleChildScrollView(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
-              child: const LoginForm(),
+              child: LoginForm(),
             ),
           ),
         );

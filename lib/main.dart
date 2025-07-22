@@ -83,10 +83,11 @@ class CarWashApp extends StatelessWidget {
         routes: {
           '/': (context) => const Splash(),
           '/home': (context) => const HomePage(),
-          '/login': (context) => const LoginForm(),
+          '/login': (context) => LoginForm(),
           '/cart': (context) => CartPage(carWash: CarWash(id: '', name: '', imageUrl: '', services: [], location: '', openHours: '', latitude: 0.0, longitude: 0.0)), // Replace with actual CarWash object if needed
         },
       ),
     );
   }
 }
+

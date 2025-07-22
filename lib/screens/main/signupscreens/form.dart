@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/api/api_connect.dart';
 import 'package:flutter_application_1/screens/main/login%20screens/account.dart';
 import 'package:flutter_application_1/screens/main/login%20screens/loginform.dart';
+
+import 'dart:convert';
 
 class SignUpForm extends StatefulWidget {
   const SignUpForm({Key? key}) : super(key: key);
@@ -54,22 +57,57 @@ class _SignUpFormState extends State<SignUpForm> {
     return null;
   }
 
-  void _submit() {
+  void _submit() async {
     if (_formKey.currentState!.validate()) {
-      
-      Navigator.pop(context);
+      // Show loading indicator
       showDialog(
         context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            contentPadding: const EdgeInsets.all(20),
-            content: const LoginForm(),
-          );
-        },
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
       );
+      try {
+        final response = await ApiConnect.register(
+          _usernameController.text,
+          _emailController.text,
+          _firstNameController.text,
+          _lastNameController.text,
+          _passwordController.text,
+          _confirmPasswordController.text,
+        );
+        Navigator.of(context).pop(); 
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Registration successful! Please log in.')),
+          );
+          Navigator.pop(context); // Close sign up dialog
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                contentPadding: const EdgeInsets.all(20),
+                content: LoginForm(),
+              );
+            },
+          );
+        } else {
+          String errorMsg = 'Registration failed!';
+          try {
+            final data = jsonDecode(response.body);
+            errorMsg = data['detail'] ?? errorMsg;
+          } catch (_) {}
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg)),
+          );
+        }
+      } catch (e) {
+        Navigator.of(context).pop(); // Remove loading indicator
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('An error occurred: $e')),
+        );
+      }
     }
   }
 
@@ -187,7 +225,7 @@ class _SignUpFormState extends State<SignUpForm> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         contentPadding: const EdgeInsets.all(20),
-                        content: const LoginForm(),
+                        content: LoginForm(),
                       );
                     },
                   );

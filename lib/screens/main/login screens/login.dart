@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/screens/main/login%20screens/loginform.dart';
 
 class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({Key? key}) : super(key: key);
 
   void _showLoginPopup(BuildContext context) {
     showDialog(
@@ -10,13 +10,13 @@ class LoginScreen extends StatelessWidget {
       barrierDismissible: true,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           contentPadding: const EdgeInsets.all(20),
           content: SingleChildScrollView(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
-              child: const LoginForm(),
+              // Pass the parent context (the scaffold's context)
+              child: LoginForm(),
             ),
           ),
         );

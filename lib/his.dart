@@ -5,7 +5,7 @@ import '../models/cars.dart';
 class BookingHistoryPage extends StatelessWidget {
   final List<Booking> bookings;
 
-  const BookingHistoryPage({Key? key, required this.bookings}) : super(key: key);
+  const BookingHistoryPage({super.key, required this.bookings});
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +20,6 @@ class BookingHistoryPage extends StatelessWidget {
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 8),
           child: ListTile(
-            
             title: Text('${booking.carWash.name} - ${booking.service.name}'),
             subtitle: Text(
               'Date: ${DateFormat.yMMMd().add_jm().format(booking.dateTime)}\n'

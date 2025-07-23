@@ -41,6 +41,11 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void removeBooking(Booking booking) {
+    _bookings.removeWhere((b) => b.id == booking.id);
+    notifyListeners();
+  }
+
   void checkout({
     required DateTime bookingDateTime,
     required String paymentMethod,
@@ -48,16 +53,17 @@ class CartProvider with ChangeNotifier {
   }) {
     if (_items.isEmpty) return;
 
-    final newBookings = _items.map((cartItem) {
-      return Booking(
-        id: _uuid.v4(),
-        carWash: carWash,
-        service: cartItem.service,
-        dateTime: bookingDateTime,
-        paymentMethod: paymentMethod,
-        quantity: cartItem.quantity,
-      );
-    }).toList();
+    final newBookings =
+        _items.map((cartItem) {
+          return Booking(
+            id: _uuid.v4(),
+            carWash: carWash,
+            service: cartItem.service,
+            dateTime: bookingDateTime,
+            paymentMethod: paymentMethod,
+            quantity: cartItem.quantity,
+          );
+        }).toList();
 
     addBookings(newBookings);
     clear();

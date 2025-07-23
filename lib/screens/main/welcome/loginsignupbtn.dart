@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/screens/main/login%20screens/loginform.dart';
 import 'package:flutter_application_1/screens/main/signupscreens/form.dart';
 
-
 class LoginAndSignupBtn extends StatelessWidget {
-  const LoginAndSignupBtn({Key? key}) : super(key: key);
+  const LoginAndSignupBtn({super.key});
 
   void _showLoginPopup(BuildContext context) {
     showDialog(
@@ -12,7 +11,9 @@ class LoginAndSignupBtn extends StatelessWidget {
       barrierDismissible: true,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           contentPadding: const EdgeInsets.all(20),
           content: SingleChildScrollView(
             child: ConstrainedBox(
@@ -24,13 +25,16 @@ class LoginAndSignupBtn extends StatelessWidget {
       },
     );
   }
+
   void _showsignupPopup(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           contentPadding: const EdgeInsets.all(20),
           content: SingleChildScrollView(
             child: ConstrainedBox(
@@ -49,21 +53,15 @@ class LoginAndSignupBtn extends StatelessWidget {
       children: [
         ElevatedButton(
           onPressed: () => _showLoginPopup(context),
-          child: Text(
-            "Login".toUpperCase(),
-          ),
+          child: Text("Login".toUpperCase()),
         ),
         const SizedBox(height: 16),
         ElevatedButton(
-          onPressed: () =>_showsignupPopup(context),
-           child: Text(
+          onPressed: () => _showsignupPopup(context),
+          child: Text(
             "Sign Up".toUpperCase(),
             style: const TextStyle(color: Colors.black),
-          ),           
-            
-          
-          
-         
+          ),
         ),
       ],
     );

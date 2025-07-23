@@ -10,7 +10,8 @@ class SignUpScreen extends StatelessWidget {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
+            borderRadius: BorderRadius.circular(16),
+          ),
           contentPadding: const EdgeInsets.all(20),
           content: SingleChildScrollView(
             child: ConstrainedBox(
@@ -27,20 +28,14 @@ class SignUpScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final signupButton = ElevatedButton(
       onPressed: () => _showsignupPopup(context),
-      child: const Text("signup"),
       style: ElevatedButton.styleFrom(
         minimumSize: const Size(300, 56),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(32),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
         backgroundColor: Colors.blue,
       ),
+      child: const Text("signup"),
     );
 
-    return Scaffold(
-      body: Center(
-        child: signupButton,
-      ),
-    );
+    return Scaffold(body: Center(child: signupButton));
   }
 }

@@ -4,10 +4,8 @@ import 'package:flutter_application_1/screens/main/reponsive%20.dart';
 import 'package:flutter_application_1/screens/main/welcome/loginsignupbtn.dart';
 import 'package:flutter_application_1/screens/main/welcome/wel.dart';
 
-
-
 class WelcomeScreen extends StatelessWidget {
-  const WelcomeScreen({Key? key}) : super(key: key);
+  const WelcomeScreen({super.key});
 
   static const List<String> bgImages = [
     'assets/images/welc.jpg',
@@ -27,17 +25,12 @@ class WelcomeScreen extends StatelessWidget {
             desktop: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: const [
-                Expanded(
-                  child: WelcomeImage(),
-                ),
+                Expanded(child: WelcomeImage()),
                 Expanded(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      SizedBox(
-                        width: 450,
-                        child: LoginAndSignupBtn(),
-                      ),
+                      SizedBox(width: 450, child: LoginAndSignupBtn()),
                     ],
                   ),
                 ),
@@ -52,24 +45,17 @@ class WelcomeScreen extends StatelessWidget {
 }
 
 class MobileWelcomeScreen extends StatelessWidget {
-  const MobileWelcomeScreen({Key? key}) : super(key: key);
+  const MobileWelcomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
-      
+
       children: <Widget>[
         const WelcomeImage(),
-        
-        Center(
-          child: SizedBox(
-            width: 300, 
-            child: const LoginAndSignupBtn(),
-          ),
-          
-        ),
-        
+
+        Center(child: SizedBox(width: 300, child: const LoginAndSignupBtn())),
       ],
     );
   }

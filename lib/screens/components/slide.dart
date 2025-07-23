@@ -9,12 +9,12 @@ class SlideshowBackground extends StatefulWidget {
   final Duration fadeDuration;
 
   const SlideshowBackground({
-    Key? key,
+    super.key,
     required this.images,
     required this.child,
     this.slideDuration = const Duration(seconds: 4),
     this.fadeDuration = const Duration(milliseconds: 1200),
-  }) : super(key: key);
+  });
 
   @override
   State<SlideshowBackground> createState() => _SlideshowBackgroundState();

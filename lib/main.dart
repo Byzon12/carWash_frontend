@@ -8,6 +8,8 @@ import 'cart.dart';
 import 'home.dart';
 import 'models/cars.dart';
 import 'screens/main/login screens/loginform.dart';
+import 'screens/backend_test_screen.dart';
+import 'screens/simple_login_test.dart';
 
 void main() {
   runApp(const CarWashApp());
@@ -40,31 +42,34 @@ class CarWashApp extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           padding: const EdgeInsets.all(20),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           minimumSize: const Size(300, 56),
         ),
       ),
-     cardTheme: CardThemeData(
-  color: colorScheme.surface,
-  elevation: 6,
-  margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-  shadowColor: Colors.black.withOpacity(0.2),
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(16),
-  ),
-),
+      cardTheme: CardThemeData(
+        color: colorScheme.surface,
+        elevation: 6,
+        margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        shadowColor: Colors.black.withOpacity(0.2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
 
       listTileTheme: ListTileThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        tileColor: colorScheme.surfaceVariant,
+        tileColor: colorScheme.surfaceContainerHighest,
         iconColor: colorScheme.primary,
         textColor: colorScheme.onSurface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       ),
       textTheme: TextTheme(
-        titleLarge: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold),
+        titleLarge: TextStyle(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.bold,
+        ),
         bodyMedium: TextStyle(color: colorScheme.onSurfaceVariant),
       ),
       splashColor: colorScheme.secondary.withOpacity(0.3),
@@ -72,9 +77,7 @@ class CarWashApp extends StatelessWidget {
     );
 
     return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => CartProvider()),
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => CartProvider())],
       child: MaterialApp(
         title: 'Car Wash Booking',
         theme: theme,
@@ -82,12 +85,28 @@ class CarWashApp extends StatelessWidget {
         initialRoute: '/',
         routes: {
           '/': (context) => const Splash(),
-          '/home': (context) => const HomePage(),
+          '/home': (context) {
+            print('[DEBUG] Route: Navigating to HomePage');
+            return const HomePage();
+          },
           '/login': (context) => LoginForm(),
-          '/cart': (context) => CartPage(carWash: CarWash(id: '', name: '', imageUrl: '', services: [], location: '', openHours: '', latitude: 0.0, longitude: 0.0)), // Replace with actual CarWash object if needed
+          '/backend-test': (context) => const BackendTestScreen(),
+          '/login-test': (context) => const SimpleLoginTest(),
+          '/cart':
+              (context) => CartPage(
+                carWash: CarWash(
+                  id: '',
+                  name: '',
+                  imageUrl: '',
+                  services: [],
+                  location: '',
+                  openHours: '',
+                  latitude: 0.0,
+                  longitude: 0.0,
+                ),
+              ), // Replace with actual CarWash object if needed
         },
       ),
     );
   }
 }
-

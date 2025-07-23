@@ -6,7 +6,7 @@ import 'package:flutter_application_1/screens/main/login%20screens/loginform.dar
 import 'dart:convert';
 
 class SignUpForm extends StatefulWidget {
-  const SignUpForm({Key? key}) : super(key: key);
+  const SignUpForm({super.key});
 
   @override
   State<SignUpForm> createState() => _SignUpFormState();
@@ -20,7 +20,8 @@ class _SignUpFormState extends State<SignUpForm> {
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   @override
   void dispose() {
@@ -74,10 +75,12 @@ class _SignUpFormState extends State<SignUpForm> {
           _passwordController.text,
           _confirmPasswordController.text,
         );
-        Navigator.of(context).pop(); 
+        Navigator.of(context).pop();
         if (response.statusCode == 201 || response.statusCode == 200) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Registration successful! Please log in.')),
+            const SnackBar(
+              content: Text('Registration successful! Please log in.'),
+            ),
           );
           Navigator.pop(context); // Close sign up dialog
           showDialog(
@@ -98,15 +101,15 @@ class _SignUpFormState extends State<SignUpForm> {
             final data = jsonDecode(response.body);
             errorMsg = data['detail'] ?? errorMsg;
           } catch (_) {}
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMsg)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(errorMsg)));
         }
       } catch (e) {
         Navigator.of(context).pop(); // Remove loading indicator
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('An error occurred: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('An error occurred: $e')));
       }
     }
   }
@@ -208,10 +211,7 @@ class _SignUpFormState extends State<SignUpForm> {
                 validator: _validateConfirmPassword,
               ),
               const SizedBox(height: 5),
-              ElevatedButton(
-                onPressed: _submit,
-                child: const Text("SIGN UP"),
-              ),
+              ElevatedButton(onPressed: _submit, child: const Text("SIGN UP")),
               const SizedBox(height: 5),
               AlreadyHaveAnAccountCheck(
                 login: false,

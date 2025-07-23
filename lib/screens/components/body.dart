@@ -6,11 +6,11 @@ class Background extends StatelessWidget {
   final double overlayOpacity;
 
   const Background({
-    Key? key,
+    super.key,
     required this.backgroundImage,
     required this.child,
     this.overlayOpacity = 0.3,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +23,7 @@ class Background extends StatelessWidget {
             width: double.infinity,
             height: double.infinity,
           ),
-          Container(
-            color: Colors.black.withOpacity(overlayOpacity),
-          ),
+          Container(color: Colors.black.withOpacity(overlayOpacity)),
           child,
         ],
       ),

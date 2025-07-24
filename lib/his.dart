@@ -59,7 +59,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
           (context) => AlertDialog(
             title: const Text('Cancel Booking'),
             content: Text(
-              'Are you sure you want to cancel booking #${booking.id}?',
+              'Are you sure you want to cancel booking ${booking.bookingNumber}?',
             ),
             actions: [
               TextButton(
@@ -187,7 +187,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Booking #${booking.id}',
+                        'Booking ${booking.bookingNumber}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -428,7 +428,6 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
       final paymentRequest = PaymentInitiationRequest(
         bookingId: booking.id,
         phoneNumber: booking.customerPhone,
-        amount: booking.totalAmount,
         paymentMethod: 'mpesa',
       );
 

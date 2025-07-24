@@ -444,6 +444,7 @@ class _BookingScreenState extends State<BookingScreen> {
         bookingId: booking.id,
         phoneNumber: phoneController.text.trim(),
         amount: booking.totalAmount,
+        paymentMethod: 'mpesa',
       );
 
       final paymentResponse = await booking_api.BookingService.initiatePayment(

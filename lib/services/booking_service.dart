@@ -26,14 +26,27 @@ class BookingRequest {
   Map<String, dynamic> toJson() {
     return {
       'location_service': locationServiceId,
-      'scheduled_date':
+      'booking_date':
           scheduledDate.toIso8601String().split('T')[0], // YYYY-MM-DD format
-      'scheduled_time': scheduledTime,
+      'booking_time': scheduledTime,
       'customer_phone': customerPhone,
-      'payment_method': paymentMethod.toLowerCase().replaceAll(' ', '_'),
+      'payment_method': _mapPaymentMethod(paymentMethod),
       'special_instructions': specialInstructions ?? '',
       'total_amount': totalAmount,
     };
+  }
+
+  String _mapPaymentMethod(String method) {
+    switch (method.toLowerCase()) {
+      case 'mobile money':
+        return 'mpesa';
+      case 'cash on service':
+        return 'cash';
+      case 'credit/debit card':
+        return 'card';
+      default:
+        return 'cash';
+    }
   }
 }
 
@@ -71,12 +84,25 @@ class Booking {
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
       id: json['id'] ?? 0,
-      locationService: json['location_service']?.toString() ?? '',
-      locationServiceName: json['location_service_name']?.toString() ?? '',
+      locationService:
+          json['location']?.toString() ??
+          json['location_service']?.toString() ??
+          '',
+      locationServiceName:
+          json['location_name']?.toString() ??
+          json['location_service_name']?.toString() ??
+          '',
       scheduledDate:
-          DateTime.tryParse(json['scheduled_date']?.toString() ?? '') ??
+          DateTime.tryParse(
+            json['booking_date']?.toString() ??
+                json['scheduled_date']?.toString() ??
+                '',
+          ) ??
           DateTime.now(),
-      scheduledTime: json['scheduled_time']?.toString() ?? '',
+      scheduledTime:
+          json['booking_time']?.toString() ??
+          json['scheduled_time']?.toString() ??
+          '',
       customerPhone: json['customer_phone']?.toString() ?? '',
       paymentMethod: json['payment_method']?.toString() ?? '',
       specialInstructions: json['special_instructions']?.toString() ?? '',
@@ -98,11 +124,13 @@ class PaymentInitiationRequest {
   final int bookingId;
   final String phoneNumber;
   final double amount;
+  final String paymentMethod;
 
   PaymentInitiationRequest({
     required this.bookingId,
     required this.phoneNumber,
     required this.amount,
+    required this.paymentMethod,
   });
 
   Map<String, dynamic> toJson() {
@@ -110,6 +138,7 @@ class PaymentInitiationRequest {
       'booking_id': bookingId,
       'phone_number': phoneNumber,
       'amount': amount,
+      'payment_method': paymentMethod,
     };
   }
 }
@@ -222,9 +251,25 @@ class BookingService {
       print('[DEBUG] BookingService: Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        print('[DEBUG] BookingService: Found ${data.length} bookings');
-        return data.map((json) => Booking.fromJson(json)).toList();
+        final responseData = jsonDecode(response.body);
+
+        // Handle both list and paginated response formats
+        if (responseData is List) {
+          print(
+            '[DEBUG] BookingService: Found ${responseData.length} bookings',
+          );
+          return responseData.map((json) => Booking.fromJson(json)).toList();
+        } else if (responseData is Map && responseData.containsKey('results')) {
+          // Handle paginated response
+          final List<dynamic> data = responseData['results'];
+          print(
+            '[DEBUG] BookingService: Found ${data.length} bookings (paginated)',
+          );
+          return data.map((json) => Booking.fromJson(json)).toList();
+        } else {
+          print('[WARNING] BookingService: Unexpected response format');
+          return [];
+        }
       } else {
         print(
           '[ERROR] BookingService: Failed to fetch bookings: ${response.statusCode}',

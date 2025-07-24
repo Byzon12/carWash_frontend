@@ -429,6 +429,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
         bookingId: booking.id,
         phoneNumber: booking.customerPhone,
         amount: booking.totalAmount,
+        paymentMethod: 'mpesa',
       );
 
       final paymentResponse = await BookingService.initiatePayment(

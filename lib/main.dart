@@ -13,6 +13,7 @@ import 'screens/simple_login_test.dart';
 import 'screens/location_test_screen.dart';
 import 'screens/quick_backend_test.dart';
 import 'screens/backend_connectivity_test.dart';
+import 'screens/login_debug_screen.dart';
 
 void main() {
   runApp(const CarWashApp());
@@ -98,6 +99,7 @@ class CarWashApp extends StatelessWidget {
           '/location-test': (context) => const LocationTestScreen(),
           '/quick-test': (context) => const QuickBackendTest(),
           '/connectivity-test': (context) => const BackendConnectivityTest(),
+          '/login-debug': (context) => const LoginDebugScreen(),
           '/cart':
               (context) => CartPage(
                 carWash: CarWash(
@@ -109,6 +111,19 @@ class CarWashApp extends StatelessWidget {
                   openHours: '',
                   latitude: 0.0,
                   longitude: 0.0,
+                  address: '',
+                  contactNumber: '',
+                  email: '',
+                  locationServices: [],
+                  totalServices: 0,
+                  popularServices: [],
+                  averageRating: 0.0,
+                  totalBookings: 0,
+                  completionRate: 0.0,
+                  isOpen: false,
+                  features: [],
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
                 ),
               ), // Replace with actual CarWash object if needed
         },

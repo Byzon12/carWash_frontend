@@ -1,5 +1,5 @@
-import 'package:flutter_application_1/models/cars.dart';
-import 'package:flutter_application_1/services/carwash_service.dart';
+import 'models/cars.dart';
+import 'services/carwash_service.dart';
 
 // Function to get car washes dynamically from API
 Future<List<CarWash>> getCarWashes() async {
@@ -184,6 +184,38 @@ List<CarWash> getLegacyCarWashes() {
       openHours: '8:00 AM - 8:00 PM',
       latitude: -1.2921,
       longitude: 36.8219,
+      address: '123 Main Street, Downtown, Nairobi',
+      contactNumber: '+254712345670',
+      email: 'contact@sparklewash.co.ke',
+      locationServices: [],
+      totalServices: SparkleWashServices.length,
+      priceRange: PriceRange(min: 1500.0, max: 4000.0, currency: 'KES'),
+      popularServices: [],
+      distance: null,
+      averageRating: 4.5,
+      totalBookings: 150,
+      completionRate: 92.0,
+      isOpen: true,
+      businessInfo: BusinessInfo(
+        contactNumber: '+254712345670',
+        email: 'contact@sparklewash.co.ke',
+        operatingHours: {
+          'monday': '8:00 AM - 8:00 PM',
+          'tuesday': '8:00 AM - 8:00 PM',
+          'wednesday': '8:00 AM - 8:00 PM',
+          'thursday': '8:00 AM - 8:00 PM',
+          'friday': '8:00 AM - 8:00 PM',
+          'saturday': '9:00 AM - 7:00 PM',
+          'sunday': '10:00 AM - 6:00 PM',
+        },
+        paymentMethods: ['Cash', 'M-Pesa', 'Credit Card'],
+        languages: ['English', 'Swahili'],
+        parking: 'Available',
+        accessibility: 'Wheelchair accessible',
+      ),
+      features: ['Free WiFi', 'Waiting Area', 'Restrooms', 'Coffee Service'],
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     ),
     CarWash(
       id: '2',
@@ -195,6 +227,38 @@ List<CarWash> getLegacyCarWashes() {
       openHours: '7:00 AM - 9:00 PM',
       latitude: -1.2833,
       longitude: 36.8167,
+      address: '456 Elm Avenue, Uptown, Nairobi',
+      contactNumber: '+254712345671',
+      email: 'info@cleanride.co.ke',
+      locationServices: [],
+      totalServices: CleanRide.length,
+      priceRange: PriceRange(min: 1000.0, max: 3200.0, currency: 'KES'),
+      popularServices: [],
+      distance: null,
+      averageRating: 4.2,
+      totalBookings: 120,
+      completionRate: 88.0,
+      isOpen: true,
+      businessInfo: BusinessInfo(
+        contactNumber: '+254712345671',
+        email: 'info@cleanride.co.ke',
+        operatingHours: {
+          'monday': '7:00 AM - 9:00 PM',
+          'tuesday': '7:00 AM - 9:00 PM',
+          'wednesday': '7:00 AM - 9:00 PM',
+          'thursday': '7:00 AM - 9:00 PM',
+          'friday': '7:00 AM - 9:00 PM',
+          'saturday': '8:00 AM - 8:00 PM',
+          'sunday': '9:00 AM - 7:00 PM',
+        },
+        paymentMethods: ['Cash', 'M-Pesa'],
+        languages: ['English', 'Swahili'],
+        parking: 'Available',
+        accessibility: 'Wheelchair accessible',
+      ),
+      features: ['Free WiFi', 'Quick Service', 'Mobile Payment'],
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     ),
   ];
 }

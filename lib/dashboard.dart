@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/models/cars.dart';
-import 'package:flutter_application_1/page.dart';
-import 'package:flutter_application_1/service.dart';
-import 'package:flutter_application_1/api/api_connect.dart';
+import 'models/cars.dart';
+import 'page.dart';
+import 'api/api_connect.dart';
+import 'screens/location_details_screen.dart';
 import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
 
@@ -192,6 +192,17 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                   child: const Text('Debug API'),
                 ),
+                const SizedBox(height: 8),
+                // Button to test connectivity screen
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/connectivity-test');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                  ),
+                  child: const Text('Full API Test'),
+                ),
               ],
             ),
           );
@@ -348,7 +359,9 @@ class _DashboardPageState extends State<DashboardPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => ServicesPage(carWash: carWash),
+                            builder:
+                                (context) =>
+                                    LocationDetailsScreen(carWash: carWash),
                           ),
                         );
                       },

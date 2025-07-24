@@ -27,7 +27,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     print('[DEBUG] HomePage: Building HomePage UI');
-    final bookings = context.watch<CartProvider>().bookings;
 
     final pages = [
       DashboardPage(
@@ -36,7 +35,7 @@ class _HomePageState extends State<HomePage> {
           context.read<CartProvider>().addBookings([booking]);
         },
       ),
-      BookingHistoryPage(bookings: bookings),
+      BookingHistoryPage(),
       const ProfilePage(
         bookings: [],
       ), // ProfilePage reads bookings internally from provider
@@ -51,6 +50,19 @@ class _HomePageState extends State<HomePage> {
           openHours: '',
           latitude: 0.0,
           longitude: 0.0,
+          address: '',
+          contactNumber: '',
+          email: '',
+          locationServices: [],
+          totalServices: 0,
+          popularServices: [],
+          averageRating: 0.0,
+          totalBookings: 0,
+          completionRate: 0.0,
+          isOpen: false,
+          features: [],
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         ),
       ),
     ];

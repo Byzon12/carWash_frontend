@@ -79,65 +79,95 @@ class ApiConnect {
 
     print('🔍 Login request body: ${jsonEncode(body)}'); // Debug log
 
-    final response = await http
-        .post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(body), // Use the conditional body
-        )
-        .timeout(const Duration(seconds: 10));
+    try {
+      print('[DEBUG] ApiConnect: Sending HTTP POST request...');
+      final response = await http
+          .post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode(body), // Use the conditional body
+          )
+          .timeout(
+            const Duration(seconds: 30), // Increased timeout
+            onTimeout: () {
+              print('[ERROR] ApiConnect: Request timed out after 30 seconds');
+              throw Exception(
+                'Connection timeout - Unable to connect to server',
+              );
+            },
+          );
 
-    print('[DEBUG] ApiConnect: Login response status: ${response.statusCode}');
-    print('[DEBUG] ApiConnect: Login response body: ${response.body}');
-
-    // Log detailed error information for debugging
-    if (response.statusCode != 200 && response.statusCode != 201) {
+      print('[DEBUG] ApiConnect: HTTP request completed successfully');
       print(
-        '[ERROR] ApiConnect: Login failed - Status: ${response.statusCode}',
+        '[DEBUG] ApiConnect: Login response status: ${response.statusCode}',
       );
-      try {
-        final errorData = jsonDecode(response.body);
-        print('[ERROR] ApiConnect: Server error details: $errorData');
-      } catch (e) {
-        print('[ERROR] ApiConnect: Could not parse error response: $e');
+      print('[DEBUG] ApiConnect: Login response body: ${response.body}');
+
+      // Log detailed error information for debugging
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        print(
+          '[ERROR] ApiConnect: Login failed - Status: ${response.statusCode}',
+        );
+        try {
+          final errorData = jsonDecode(response.body);
+          print('[ERROR] ApiConnect: Server error details: $errorData');
+        } catch (e) {
+          print('[ERROR] ApiConnect: Could not parse error response: $e');
+        }
       }
-    }
 
-    // Handle successful login response
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      print('[DEBUG] ApiConnect: Login successful, storing user data');
-      try {
-        final data = jsonDecode(response.body);
+      // Handle successful login response
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('[DEBUG] ApiConnect: Login successful, storing user data');
+        try {
+          final data = jsonDecode(response.body);
 
-        // Store tokens
-        await storage.write(key: 'access', value: data['access']);
-        await storage.write(key: 'refresh', value: data['refresh']);
+          // Store tokens
+          await storage.write(key: 'access', value: data['access']);
+          await storage.write(key: 'refresh', value: data['refresh']);
 
-        // Store user profile data if available
-        if (data['username'] != null) {
-          await storage.write(key: 'username', value: data['username']);
-        }
-        if (data['email'] != null) {
-          await storage.write(key: 'email', value: data['email']);
-        }
-        if (data['first_name'] != null) {
-          await storage.write(key: 'first_name', value: data['first_name']);
-        }
-        if (data['last_name'] != null) {
-          await storage.write(key: 'last_name', value: data['last_name']);
-        }
+          // Store user profile data if available
+          if (data['username'] != null) {
+            await storage.write(key: 'username', value: data['username']);
+          }
+          if (data['email'] != null) {
+            await storage.write(key: 'email', value: data['email']);
+          }
+          if (data['first_name'] != null) {
+            await storage.write(key: 'first_name', value: data['first_name']);
+          }
+          if (data['last_name'] != null) {
+            await storage.write(key: 'last_name', value: data['last_name']);
+          }
 
-        print('[DEBUG] ApiConnect: User data stored successfully');
-      } catch (e) {
-        print('[ERROR] ApiConnect: Error parsing/storing login response: $e');
+          print('[DEBUG] ApiConnect: User data stored successfully');
+        } catch (e) {
+          print('[ERROR] ApiConnect: Error parsing/storing login response: $e');
+        }
+      } else {
+        print(
+          '[ERROR] ApiConnect: Login failed with status: ${response.statusCode}',
+        );
       }
-    } else {
-      print(
-        '[ERROR] ApiConnect: Login failed with status: ${response.statusCode}',
+
+      return response;
+    } catch (e) {
+      print('[ERROR] ApiConnect: Network error during login: $e');
+      // Create a mock response for network errors
+      final errorResponse = http.Response(
+        jsonEncode({
+          'error': 'Connection failed',
+          'detail':
+              'Unable to connect to server. Please check your connection.',
+          'message': e.toString(),
+        }),
+        500,
       );
+      return errorResponse;
     }
-
-    return response;
   }
 
   // Token refresh method

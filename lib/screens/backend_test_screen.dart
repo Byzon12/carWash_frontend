@@ -153,6 +153,57 @@ class _BackendTestScreenState extends State<BackendTestScreen> {
     });
   }
 
+  Future<void> _testLocations() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    _logResult('📍 Testing locations API...');
+
+    try {
+      // First check if user is logged in
+      final isLoggedIn = await ApiConnect.isLoggedIn();
+      _logResult('🔍 Is logged in: $isLoggedIn');
+
+      if (!isLoggedIn) {
+        _logResult('⚠️ User not logged in, locations test may fail');
+      }
+
+      final response = await ApiConnect.getLocations();
+
+      if (response != null) {
+        _logResult('📡 Response received');
+        _logResult('   Status: ${response.statusCode}');
+        _logResult('   Headers: ${response.headers}');
+
+        if (response.body.isNotEmpty) {
+          try {
+            final data = jsonDecode(response.body);
+            _logResult('   Body (JSON): ${jsonEncode(data)}');
+          } catch (e) {
+            _logResult('   Body (Raw): ${response.body}');
+          }
+        }
+
+        if (response.statusCode == 200) {
+          _logResult('✅ Locations fetch successful!');
+        } else {
+          _logResult(
+            '❌ Locations fetch failed with status ${response.statusCode}',
+          );
+        }
+      } else {
+        _logResult('❌ No response received from locations API');
+      }
+    } catch (e) {
+      _logResult('❌ Locations error: $e');
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

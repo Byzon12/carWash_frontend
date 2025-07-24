@@ -225,6 +225,15 @@ class _ProfilePageState extends State<ProfilePage> {
       appBar: AppBar(
         title: const Text('Profile'),
         actions: [
+          // Refresh profile data button
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              print('[DEBUG] ProfilePage: Refresh button pressed');
+              _loadUserProfile();
+            },
+            tooltip: 'Refresh Profile',
+          ),
           // Password change button in top corner
           IconButton(
             icon: const Icon(Icons.lock),
@@ -322,20 +331,41 @@ class _ProfilePageState extends State<ProfilePage> {
                         const SizedBox(height: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                            horizontal: 12,
+                            vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${_userProfile?['loyalty_points'] ?? 0} Loyalty Points',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.blue.shade800,
-                              fontWeight: FontWeight.bold,
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.amber.shade200,
+                                Colors.orange.shade300,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
+                            borderRadius: BorderRadius.circular(15),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.orange.shade300.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('🏆', style: TextStyle(fontSize: 14)),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${_userProfile?['loyalty_points'] ?? 0} Loyalty Points',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange.shade800,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],

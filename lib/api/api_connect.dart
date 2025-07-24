@@ -1,18 +1,33 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiConnect {
-  // TODO: Move this to environment configuration or config file
-  // For development - use your local IP
-  // For production - use your deployed backend URL
-  static const String baseUrl = 'http://127.0.0.1:8000/user/';
+  // Dynamic base URL based on platform
+  static String get baseUrl {
+    if (kIsWeb) {
+      // For web development, use localhost
+      return 'http://localhost:8000/';
+    } else {
+      // For mobile development
+      return 'http://127.0.0.1:8000/';
+    }
+  }
 
-  // Alternative: Use localhost for Android emulator
-  // static const String baseUrl = 'http://10.0.2.2:8000/user/';
+  // User authentication base URL
+  static String get userBaseUrl {
+    return '${baseUrl}user/';
+  }
 
-  // For production, use:
-  // static const String baseUrl = 'https://your-backend-domain.com/user/';
+  // Users data base URL
+  static String get usersBaseUrl {
+    return '${baseUrl}users/';
+  }
+
+  // Alternative configurations for different scenarios:
+  // For Android emulator: 'http://10.0.2.2:8000/user/'
+  // For production: 'https://your-backend-domain.com/user/'
 
   static FlutterSecureStorage get storage => const FlutterSecureStorage();
 
@@ -24,7 +39,7 @@ class ApiConnect {
     String password,
     String confirmPassword,
   ) async {
-    final url = Uri.parse('${baseUrl}register/');
+    final url = Uri.parse('${userBaseUrl}register/');
     return await http
         .post(
           url,
@@ -48,7 +63,11 @@ class ApiConnect {
     required String password,
   }) async {
     print('[DEBUG] ApiConnect: Starting login request');
-    final url = Uri.parse('${baseUrl}login/');
+    print('[DEBUG] ApiConnect: Using user base URL: $userBaseUrl');
+    print('[DEBUG] ApiConnect: Platform - Web: $kIsWeb');
+
+    final url = Uri.parse('${userBaseUrl}login/');
+    print('[DEBUG] ApiConnect: Full login URL: $url');
 
     // Create body map with conditional logic
     Map<String, dynamic> body = {'password': password};
@@ -70,6 +89,19 @@ class ApiConnect {
 
     print('[DEBUG] ApiConnect: Login response status: ${response.statusCode}');
     print('[DEBUG] ApiConnect: Login response body: ${response.body}');
+
+    // Log detailed error information for debugging
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      print(
+        '[ERROR] ApiConnect: Login failed - Status: ${response.statusCode}',
+      );
+      try {
+        final errorData = jsonDecode(response.body);
+        print('[ERROR] ApiConnect: Server error details: $errorData');
+      } catch (e) {
+        print('[ERROR] ApiConnect: Could not parse error response: $e');
+      }
+    }
 
     // Handle successful login response
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -114,7 +146,7 @@ class ApiConnect {
       final refreshToken = await storage.read(key: 'refresh');
       if (refreshToken == null) return null;
 
-      final url = Uri.parse('${baseUrl}refresh/');
+      final url = Uri.parse('${userBaseUrl}refresh/');
       final response = await http
           .post(
             url,
@@ -189,14 +221,37 @@ class ApiConnect {
 
   // Password reset method
   static Future<http.Response> passwordReset(String email) async {
-    final url = Uri.parse('${baseUrl}password-reset/');
-    return await http
+    print('[DEBUG] ApiConnect: Sending password reset for email: $email');
+    final url = Uri.parse('${userBaseUrl}password-reset/');
+    final response = await http
         .post(
           url,
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'email': email}),
         )
         .timeout(const Duration(seconds: 10));
+
+    print(
+      '[DEBUG] ApiConnect: Password reset response status: ${response.statusCode}',
+    );
+    print('[DEBUG] ApiConnect: Password reset response body: ${response.body}');
+
+    // Log detailed error information for debugging
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      print(
+        '[ERROR] ApiConnect: Password reset failed - Status: ${response.statusCode}',
+      );
+      try {
+        final errorData = jsonDecode(response.body);
+        print('[ERROR] ApiConnect: Password reset error details: $errorData');
+      } catch (e) {
+        print(
+          '[ERROR] ApiConnect: Could not parse password reset error response: $e',
+        );
+      }
+    }
+
+    return response;
   }
 
   // Get user profile method
@@ -205,7 +260,7 @@ class ApiConnect {
       final token = await getAccessToken();
       if (token == null) return null;
 
-      final url = Uri.parse('${baseUrl}profile/');
+      final url = Uri.parse('${userBaseUrl}profile/');
       final response = await http
           .get(
             url,
@@ -235,7 +290,7 @@ class ApiConnect {
       final token = await getAccessToken();
       if (token == null) return null;
 
-      final url = Uri.parse('${baseUrl}profile/');
+      final url = Uri.parse('${userBaseUrl}profile/');
       final response = await http
           .put(
             url,
@@ -270,7 +325,7 @@ class ApiConnect {
       final token = await getAccessToken();
       if (token == null) return null;
 
-      final url = Uri.parse('${baseUrl}change-password/');
+      final url = Uri.parse('${userBaseUrl}password-reset-change/');
       final response = await http
           .post(
             url,
@@ -288,6 +343,62 @@ class ApiConnect {
 
       return response;
     } catch (e) {
+      return null;
+    }
+  }
+
+  // Get car wash locations method
+  static Future<http.Response?> getLocations() async {
+    try {
+      print('[DEBUG] ApiConnect: Fetching car wash locations...');
+      print('[DEBUG] ApiConnect: Using user base URL: $userBaseUrl');
+
+      // Get the authentication token
+      final token = await getAccessToken();
+      if (token == null) {
+        print(
+          '[ERROR] ApiConnect: No access token available for locations request',
+        );
+        return null;
+      }
+
+      final url = Uri.parse('${userBaseUrl}locations/');
+      print('[DEBUG] ApiConnect: Full locations URL: $url');
+
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+
+      print(
+        '[DEBUG] ApiConnect: Locations response status: ${response.statusCode}',
+      );
+      print('[DEBUG] ApiConnect: Locations response body: ${response.body}');
+
+      // Log detailed error information for debugging
+      if (response.statusCode != 200) {
+        print(
+          '[ERROR] ApiConnect: Failed to fetch locations - Status: ${response.statusCode}',
+        );
+        try {
+          final errorData = jsonDecode(response.body);
+          print('[ERROR] ApiConnect: Locations error details: $errorData');
+        } catch (e) {
+          print(
+            '[ERROR] ApiConnect: Could not parse locations error response: $e',
+          );
+        }
+      }
+
+      return response;
+    } catch (e, stackTrace) {
+      print('[ERROR] ApiConnect: Exception fetching locations: $e');
+      print('[ERROR] ApiConnect: Stack trace: $stackTrace');
       return null;
     }
   }

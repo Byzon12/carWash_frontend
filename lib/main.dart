@@ -10,6 +10,9 @@ import 'models/cars.dart';
 import 'screens/main/login screens/loginform.dart';
 import 'screens/backend_test_screen.dart';
 import 'screens/simple_login_test.dart';
+import 'screens/location_test_screen.dart';
+import 'screens/quick_backend_test.dart';
+import 'screens/backend_connectivity_test.dart';
 
 void main() {
   runApp(const CarWashApp());
@@ -92,6 +95,9 @@ class CarWashApp extends StatelessWidget {
           '/login': (context) => LoginForm(),
           '/backend-test': (context) => const BackendTestScreen(),
           '/login-test': (context) => const SimpleLoginTest(),
+          '/location-test': (context) => const LocationTestScreen(),
+          '/quick-test': (context) => const QuickBackendTest(),
+          '/connectivity-test': (context) => const BackendConnectivityTest(),
           '/cart':
               (context) => CartPage(
                 carWash: CarWash(

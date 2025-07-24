@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/api/api_connect.dart';
 import 'package:flutter_application_1/screens/main/login%20screens/account.dart';
+import 'package:flutter_application_1/home.dart';
 
 import 'dart:convert';
 import 'package:flutter_application_1/screens/main/signupscreens/form.dart';
@@ -19,6 +20,8 @@ class _LoginFormState extends State<LoginForm> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _loginSuccess = false;
+  String? _errorMessage;
+  bool _showError = false;
 
   @override
   void dispose() {
@@ -44,8 +47,248 @@ class _LoginFormState extends State<LoginForm> {
     return null;
   }
 
+  // Helper method to test route navigation
+  void _testNavigation() {
+    print('[DEBUG] LoginForm: Testing navigation to /home...');
+    try {
+      Navigator.of(context).pushReplacementNamed('/home');
+      print('[DEBUG] LoginForm: Navigation test successful!');
+    } catch (e) {
+      print('[DEBUG] LoginForm: Navigation test failed: $e');
+    }
+  }
+
+  // Enhanced method to parse server error messages
+  String _parseServerError(int statusCode, String responseBody) {
+    print('[DEBUG] LoginForm: Parsing server error - Status: $statusCode');
+    print('[DEBUG] LoginForm: Response body: $responseBody');
+
+    String errorMsg = 'Login failed!';
+
+    // Default messages for status codes
+    switch (statusCode) {
+      case 400:
+        errorMsg = 'Invalid request. Please check your input.';
+        break;
+      case 401:
+        errorMsg = 'Invalid username/email or password.';
+        break;
+      case 403:
+        errorMsg = 'Access forbidden. Your account may be disabled.';
+        break;
+      case 404:
+        errorMsg = 'Login service not found. Please contact support.';
+        break;
+      case 429:
+        errorMsg = 'Too many login attempts. Please try again later.';
+        break;
+      case 500:
+        errorMsg = 'Server error. Please try again later.';
+        break;
+      case 502:
+        errorMsg = 'Service temporarily unavailable. Please try again.';
+        break;
+      case 503:
+        errorMsg = 'Service under maintenance. Please try again later.';
+        break;
+      default:
+        errorMsg = 'Login failed with error code $statusCode.';
+    }
+
+    // Try to parse JSON response for more specific error messages
+    try {
+      final data = jsonDecode(responseBody);
+      print('[DEBUG] LoginForm: Parsed JSON response: $data');
+
+      if (data is Map) {
+        // Common error message fields from Django REST framework
+        if (data.containsKey('detail')) {
+          errorMsg = _formatErrorMessage(data['detail']);
+        } else if (data.containsKey('error')) {
+          errorMsg = _formatErrorMessage(data['error']);
+        } else if (data.containsKey('message')) {
+          errorMsg = _formatErrorMessage(data['message']);
+        } else if (data.containsKey('non_field_errors')) {
+          if (data['non_field_errors'] is List &&
+              data['non_field_errors'].isNotEmpty) {
+            errorMsg = _formatErrorMessage(data['non_field_errors'][0]);
+          }
+        } else {
+          // Handle field-specific validation errors
+          final errors = <String>[];
+
+          // Common field names and their user-friendly versions
+          final fieldMapping = {
+            'username': 'Username',
+            'email': 'Email',
+            'password': 'Password',
+            'credentials': 'Login credentials',
+          };
+
+          data.forEach((key, value) {
+            if (value is List && value.isNotEmpty) {
+              final fieldName = fieldMapping[key] ?? key;
+              final errorMessage = value.join(', ');
+              errors.add('$fieldName: ${_formatErrorMessage(errorMessage)}');
+            } else if (value is String && value.isNotEmpty) {
+              final fieldName = fieldMapping[key] ?? key;
+              errors.add('$fieldName: ${_formatErrorMessage(value)}');
+            }
+          });
+
+          if (errors.isNotEmpty) {
+            errorMsg = errors.join('\n');
+          }
+        }
+      }
+    } catch (e) {
+      print('[ERROR] LoginForm: Error parsing JSON response: $e');
+      // Keep the default error message based on status code
+      errorMsg += ' Please try again.';
+    }
+
+    return errorMsg;
+  }
+
+  // Helper method to format error messages for better readability
+  String _formatErrorMessage(dynamic message) {
+    if (message is String) {
+      // Common server error message translations
+      final errorTranslations = {
+        'Invalid credentials':
+            'The username/email or password you entered is incorrect.',
+        'Unable to log in with provided credentials':
+            'The username/email or password you entered is incorrect.',
+        'No active account found with the given credentials':
+            'No account found with these login details.',
+        'This field may not be blank': 'This field is required.',
+        'This field is required': 'This field cannot be empty.',
+        'Enter a valid email address': 'Please enter a valid email address.',
+        'This password is too short': 'Password must be longer.',
+        'This password is too common': 'Please choose a more secure password.',
+        'User is not active':
+            'Your account has been deactivated. Please contact support.',
+        'Account locked':
+            'Your account has been temporarily locked due to multiple failed login attempts.',
+      };
+
+      // Check for exact matches first
+      for (final entry in errorTranslations.entries) {
+        if (message.toLowerCase().contains(entry.key.toLowerCase())) {
+          return entry.value;
+        }
+      }
+
+      // Return the original message with first letter capitalized
+      return message.isNotEmpty
+          ? message[0].toUpperCase() + message.substring(1)
+          : message;
+    }
+
+    return message.toString();
+  }
+
+  // Enhanced method to parse password reset error messages
+  String _parsePasswordResetError(int statusCode, String responseBody) {
+    print(
+      '[DEBUG] LoginForm: Parsing password reset error - Status: $statusCode',
+    );
+    print('[DEBUG] LoginForm: Response body: $responseBody');
+
+    String errorMsg = 'Failed to send reset link';
+
+    // Default messages for status codes
+    switch (statusCode) {
+      case 400:
+        errorMsg = 'Invalid email address format.';
+        break;
+      case 404:
+        errorMsg = 'No account found with this email address.';
+        break;
+      case 429:
+        errorMsg = 'Too many reset requests. Please wait before trying again.';
+        break;
+      case 500:
+        errorMsg = 'Server error. Please try again later.';
+        break;
+      case 502:
+        errorMsg = 'Email service temporarily unavailable.';
+        break;
+      case 503:
+        errorMsg = 'Password reset service under maintenance.';
+        break;
+      default:
+        errorMsg = 'Failed to send reset link. Error code: $statusCode';
+    }
+
+    // Try to parse JSON response for more specific error messages
+    try {
+      final data = jsonDecode(responseBody);
+      print('[DEBUG] LoginForm: Parsed password reset JSON response: $data');
+
+      if (data is Map) {
+        if (data.containsKey('detail')) {
+          errorMsg = _formatPasswordResetErrorMessage(data['detail']);
+        } else if (data.containsKey('error')) {
+          errorMsg = _formatPasswordResetErrorMessage(data['error']);
+        } else if (data.containsKey('message')) {
+          errorMsg = _formatPasswordResetErrorMessage(data['message']);
+        } else if (data.containsKey('email')) {
+          if (data['email'] is List && data['email'].isNotEmpty) {
+            errorMsg =
+                'Email: ${_formatPasswordResetErrorMessage(data['email'][0])}';
+          }
+        }
+      }
+    } catch (e) {
+      print(
+        '[ERROR] LoginForm: Error parsing password reset JSON response: $e',
+      );
+    }
+
+    return errorMsg;
+  }
+
+  // Helper method to format password reset error messages
+  String _formatPasswordResetErrorMessage(dynamic message) {
+    if (message is String) {
+      final errorTranslations = {
+        'User with this email does not exist':
+            'No account found with this email address.',
+        'Invalid email': 'Please enter a valid email address.',
+        'Rate limit exceeded':
+            'Too many reset requests. Please wait before trying again.',
+        'Email not found': 'No account found with this email address.',
+        'Enter a valid email address': 'Please enter a valid email address.',
+        'This field may not be blank': 'Email address is required.',
+        'This field is required': 'Email address is required.',
+      };
+
+      // Check for exact matches first
+      for (final entry in errorTranslations.entries) {
+        if (message.toLowerCase().contains(entry.key.toLowerCase())) {
+          return entry.value;
+        }
+      }
+
+      return message.isNotEmpty
+          ? message[0].toUpperCase() + message.substring(1)
+          : message;
+    }
+
+    return message.toString();
+  }
+
   void _submit() async {
     print('[DEBUG] LoginForm: _submit() called');
+    print('[DEBUG] LoginForm: Current context: $context');
+    print('[DEBUG] LoginForm: Navigator canPop: ${Navigator.canPop(context)}');
+
+    // Clear previous error state
+    setState(() {
+      _errorMessage = null;
+      _showError = false;
+    });
 
     if (_formKey.currentState!.validate()) {
       print('[DEBUG] LoginForm: Form validation passed');
@@ -72,57 +315,89 @@ class _LoginFormState extends State<LoginForm> {
         print('🔍 Login response body: ${response.body}');
         if (response.statusCode == 200 || response.statusCode == 201) {
           print('✅ Login successful! Setting success state and navigating...');
-          setState(() => _loginSuccess = true);
+          setState(() {
+            _loginSuccess = true;
+            _showError = false;
+            _errorMessage = null;
+            _isLoading = false; // Stop loading to show success message
+          });
+
+          print('🔍 Success state set to: $_loginSuccess');
+          print('🔍 Loading state: $_isLoading');
+          print('🔍 Error state: $_showError');
 
           // User data is already stored by ApiConnect.login() method
           print(
             '📱 User data stored by API method, proceeding with navigation...',
           );
 
-          // Wait a short time before navigation
-          await Future.delayed(const Duration(milliseconds: 500));
+          // Wait longer to show success message
+          await Future.delayed(const Duration(milliseconds: 2000));
 
           // Then navigate to home screen
           if (mounted) {
             print('🏠 Navigating to home screen...');
             print('🔍 Current route: ${ModalRoute.of(context)?.settings.name}');
-            print('🔍 Navigator state: ${Navigator.of(context)}');
+            print('🔍 Login success state: $_loginSuccess');
 
             try {
-              // First, let's try a simple push to see if route exists
-              print('🧪 Testing if /home route exists...');
+              // Simple navigation to home
+              print('🧪 Attempting navigation to /home...');
 
-              // Navigate to home using pushNamedAndRemoveUntil to clear the stack
-              Navigator.of(context).pushNamedAndRemoveUntil(
-                '/home',
-                (route) => false, // Remove all previous routes
-              );
-              print('🎯 Navigation to home completed successfully!');
-
-              // Show success message to user
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Login successful! Welcome back!'),
-                    backgroundColor: Colors.green,
+              // Show success message before navigation
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('Login successful! Redirecting to dashboard...'),
+                    ],
                   ),
-                );
-              }
+                  backgroundColor: Colors.green.shade700,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+
+              // Wait a bit for snackbar to show
+              await Future.delayed(const Duration(milliseconds: 1000));
+
+              Navigator.of(context).pushReplacementNamed('/home');
+              print('🎯 Navigation to home completed successfully!');
             } catch (e, stackTrace) {
               print('❌ Navigation error: $e');
               print('❌ Stack trace: $stackTrace');
 
-              // Fallback: try pushReplacement instead
+              // Fallback: try pushNamedAndRemoveUntil
               try {
-                print('🔄 Trying fallback navigation...');
-                Navigator.of(context).pushReplacementNamed('/home');
+                print(
+                  '🔄 Trying fallback navigation with pushNamedAndRemoveUntil...',
+                );
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil('/home', (route) => false);
                 print('🔄 Fallback navigation completed!');
 
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Login successful! (fallback navigation)'),
-                      backgroundColor: Colors.orange,
+                    SnackBar(
+                      content: const Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text('Login successful! (fallback navigation)'),
+                        ],
+                      ),
+                      backgroundColor: Colors.orange.shade700,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      duration: const Duration(seconds: 3),
                     ),
                   );
                 }
@@ -130,22 +405,90 @@ class _LoginFormState extends State<LoginForm> {
                 print('❌ Fallback navigation failed: $fallbackError');
                 print('❌ Fallback stack trace: $fallbackTrace');
 
-                // Show error to user
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Navigation error: $fallbackError'),
-                      backgroundColor: Colors.red,
-                      action: SnackBarAction(
-                        label: 'Retry',
-                        onPressed: () {
-                          Navigator.of(
-                            context,
-                          ).pushNamedAndRemoveUntil('/home', (route) => false);
-                        },
-                      ),
-                    ),
+                // Final fallback: try direct route construction
+                try {
+                  print('🔄 Trying direct navigation...');
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const HomePage()),
+                    (route) => false,
                   );
+                  print('🔄 Direct navigation completed!');
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Row(
+                          children: [
+                            Icon(Icons.warning, color: Colors.white),
+                            SizedBox(width: 8),
+                            Text('Login successful! (direct navigation)'),
+                          ],
+                        ),
+                        backgroundColor: Colors.amber.shade700,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                } catch (directError) {
+                  print('❌ Direct navigation failed: $directError');
+
+                  // Show error to user
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.error, color: Colors.white),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Navigation Error',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Login successful but navigation failed: $directError',
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        backgroundColor: Colors.red.shade700,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        duration: const Duration(seconds: 6),
+                        action: SnackBarAction(
+                          label: 'GO HOME',
+                          textColor: Colors.white,
+                          backgroundColor: Colors.red.shade500,
+                          onPressed: () {
+                            try {
+                              Navigator.of(context).pushNamedAndRemoveUntil(
+                                '/home',
+                                (route) => false,
+                              );
+                            } catch (e) {
+                              print('❌ Manual navigation also failed: $e');
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  }
                 }
               }
             }
@@ -158,61 +501,57 @@ class _LoginFormState extends State<LoginForm> {
           );
           print('[ERROR] LoginForm: Response body: ${response.body}');
 
-          String errorMsg = 'Login failed!';
-
-          // More detailed error handling for different status codes
-          if (response.statusCode == 400) {
-            errorMsg = 'Bad Request: Please check your credentials';
-          } else if (response.statusCode == 401) {
-            errorMsg = 'Invalid credentials';
-          } else if (response.statusCode == 404) {
-            errorMsg = 'Login endpoint not found';
-          } else if (response.statusCode == 500) {
-            errorMsg = 'Server error. Please try again later';
-          }
-
-          try {
-            final data = jsonDecode(response.body);
-            print('[DEBUG] LoginForm: Parsed error response: $data');
-
-            if (data is Map && data.containsKey('detail')) {
-              errorMsg = data['detail'];
-            } else if (data is Map && data.containsKey('error')) {
-              errorMsg = data['error'];
-            } else if (data is Map && data.containsKey('message')) {
-              errorMsg = data['message'];
-            } else if (data is Map) {
-              // Handle validation errors
-              final errors = <String>[];
-              data.forEach((key, value) {
-                if (value is List) {
-                  errors.add('$key: ${value.join(', ')}');
-                } else {
-                  errors.add('$key: $value');
-                }
-              });
-              if (errors.isNotEmpty) {
-                errorMsg = errors.join('\n');
-              }
-            }
-          } catch (e) {
-            print('[ERROR] LoginForm: Error parsing login response: $e');
-            errorMsg += ' (Status: ${response.statusCode})';
-          }
+          // Use enhanced error parsing method
+          String errorMsg = _parseServerError(
+            response.statusCode,
+            response.body,
+          );
 
           print('[DEBUG] LoginForm: Final error message: $errorMsg');
 
-          // Ensure widget is mounted before showing SnackBar
+          // Set error state for inline display
+          setState(() {
+            _errorMessage = errorMsg;
+            _showError = true;
+          });
+
+          // Enhanced SnackBar with better styling
           if (mounted) {
-            print('[DEBUG] LoginForm: Showing error SnackBar');
+            print('[DEBUG] LoginForm: Showing enhanced error SnackBar');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Login failed: $errorMsg'),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 5),
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Login Failed',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(errorMsg, style: const TextStyle(fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors.red.shade700,
+                duration: const Duration(seconds: 6),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 action: SnackBarAction(
-                  label: 'Retry',
+                  label: 'RETRY',
                   textColor: Colors.white,
+                  backgroundColor: Colors.red.shade500,
                   onPressed: () {
                     print('[DEBUG] LoginForm: Retry button pressed');
                     _submit();
@@ -230,17 +569,55 @@ class _LoginFormState extends State<LoginForm> {
         print('[ERROR] LoginForm: Login exception: $e');
         print('[ERROR] LoginForm: Stack trace: $stackTrace');
 
-        // Only show SnackBar if the widget is still mounted
+        // Set connection error state
+        setState(() {
+          _errorMessage =
+              'Unable to connect to server. Please check your internet connection and try again.';
+          _showError = true;
+        });
+
+        // Enhanced connection error SnackBar
         if (mounted) {
-          print('[DEBUG] LoginForm: Showing connection error SnackBar');
+          print(
+            '[DEBUG] LoginForm: Showing enhanced connection error SnackBar',
+          );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Connection error: Failed to connect to server'),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 5),
+              content: Row(
+                children: [
+                  const Icon(Icons.wifi_off, color: Colors.white),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Connection Error',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          'Failed to connect to server',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.orange.shade700,
+              duration: const Duration(seconds: 6),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
               action: SnackBarAction(
-                label: 'Retry',
+                label: 'RETRY',
                 textColor: Colors.white,
+                backgroundColor: Colors.orange.shade500,
                 onPressed: () {
                   print(
                     '[DEBUG] LoginForm: Retry button pressed from exception handler',
@@ -260,12 +637,46 @@ class _LoginFormState extends State<LoginForm> {
       }
     } else {
       print('[DEBUG] LoginForm: Form validation failed');
-      // Show validation error message
+      // Set validation error state
+      setState(() {
+        _errorMessage = 'Please fill in all required fields correctly';
+        _showError = true;
+      });
+
+      // Enhanced validation error SnackBar
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill in all required fields correctly'),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 3),
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.warning_amber, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Validation Error',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      'Please check your input fields',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.amber.shade700,
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -326,11 +737,43 @@ class _LoginFormState extends State<LoginForm> {
                               : () async {
                                 if (emailController.text.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Please enter your email address',
+                                    SnackBar(
+                                      content: const Row(
+                                        children: [
+                                          Icon(
+                                            Icons.error_outline,
+                                            color: Colors.white,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  'Email Required',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'Please enter your email address',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      backgroundColor: Colors.red,
+                                      backgroundColor: Colors.red.shade700,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
                                     ),
                                   );
                                   return;
@@ -340,11 +783,43 @@ class _LoginFormState extends State<LoginForm> {
                                   r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                                 ).hasMatch(emailController.text)) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Please enter a valid email address',
+                                    SnackBar(
+                                      content: const Row(
+                                        children: [
+                                          Icon(
+                                            Icons.email_outlined,
+                                            color: Colors.white,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  'Invalid Email',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'Please enter a valid email address',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      backgroundColor: Colors.red,
+                                      backgroundColor: Colors.orange.shade700,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
                                     ),
                                   );
                                   return;
@@ -365,27 +840,90 @@ class _LoginFormState extends State<LoginForm> {
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Password reset link sent! Check your email.',
+                                        SnackBar(
+                                          content: const Row(
+                                            children: [
+                                              Icon(
+                                                Icons.check_circle,
+                                                color: Colors.white,
+                                              ),
+                                              SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      'Reset Link Sent!',
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 16,
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      'Check your email for password reset instructions',
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          backgroundColor: Colors.green,
-                                          duration: Duration(seconds: 5),
+                                          backgroundColor:
+                                              Colors.green.shade700,
+                                          duration: const Duration(seconds: 6),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
                                         ),
                                       );
                                     }
                                   } else {
+                                    // Use enhanced error parsing for password reset
                                     String errorMessage =
-                                        'Failed to send reset link';
+                                        _parsePasswordResetError(
+                                          response.statusCode,
+                                          response.body,
+                                        );
 
-                                    if (response.statusCode == 404) {
-                                      errorMessage = 'Email address not found';
-                                    } else if (response.statusCode == 429) {
-                                      errorMessage =
-                                          'Too many requests. Please try again later';
-                                    } else if (response.statusCode >= 500) {
-                                      errorMessage =
-                                          'Server error. Please try again later';
+                                    // Determine appropriate icon based on error type
+                                    IconData errorIcon = Icons.error_outline;
+                                    if (errorMessage.toLowerCase().contains(
+                                          'email',
+                                        ) &&
+                                        errorMessage.toLowerCase().contains(
+                                          'not found',
+                                        )) {
+                                      errorIcon = Icons.person_search;
+                                    } else if (errorMessage
+                                            .toLowerCase()
+                                            .contains('too many') ||
+                                        errorMessage.toLowerCase().contains(
+                                          'wait',
+                                        )) {
+                                      errorIcon = Icons.hourglass_empty;
+                                    } else if (errorMessage
+                                            .toLowerCase()
+                                            .contains('server') ||
+                                        errorMessage.toLowerCase().contains(
+                                          'maintenance',
+                                        )) {
+                                      errorIcon = Icons.dns_outlined;
+                                    } else if (errorMessage
+                                            .toLowerCase()
+                                            .contains('invalid') &&
+                                        errorMessage.toLowerCase().contains(
+                                          'email',
+                                        )) {
+                                      errorIcon = Icons.email_outlined;
                                     }
 
                                     if (mounted) {
@@ -393,9 +931,56 @@ class _LoginFormState extends State<LoginForm> {
                                         context,
                                       ).showSnackBar(
                                         SnackBar(
-                                          content: Text(errorMessage),
-                                          backgroundColor: Colors.red,
-                                          duration: const Duration(seconds: 5),
+                                          content: Row(
+                                            children: [
+                                              Icon(
+                                                errorIcon,
+                                                color: Colors.white,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const Text(
+                                                      'Reset Failed',
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 16,
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      errorMessage,
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          backgroundColor: Colors.red.shade700,
+                                          duration: const Duration(seconds: 6),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          action: SnackBarAction(
+                                            label: 'RETRY',
+                                            textColor: Colors.white,
+                                            backgroundColor:
+                                                Colors.red.shade500,
+                                            onPressed: () {
+                                              _showForgotPasswordDialog();
+                                            },
+                                          ),
                                         ),
                                       );
                                     }
@@ -405,9 +990,55 @@ class _LoginFormState extends State<LoginForm> {
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Network error: $e'),
-                                        backgroundColor: Colors.red,
-                                        duration: const Duration(seconds: 5),
+                                        content: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.wifi_off,
+                                              color: Colors.white,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Text(
+                                                    'Network Error',
+                                                    style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    'Failed to connect: $e',
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        backgroundColor: Colors.orange.shade700,
+                                        duration: const Duration(seconds: 6),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        action: SnackBarAction(
+                                          label: 'RETRY',
+                                          textColor: Colors.white,
+                                          backgroundColor:
+                                              Colors.orange.shade500,
+                                          onPressed: () {
+                                            _showForgotPasswordDialog();
+                                          },
+                                        ),
                                       ),
                                     );
                                   }
@@ -479,31 +1110,95 @@ class _LoginFormState extends State<LoginForm> {
             ),
           ),
           const SizedBox(height: 16.0),
+          // Inline Error Display
+          if (_showError && _errorMessage != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12.0),
+              margin: const EdgeInsets.only(bottom: 16.0),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                border: Border.all(color: Colors.red.shade300),
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    color: Colors.red.shade700,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: TextStyle(
+                        color: Colors.red.shade800,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _showError = false;
+                        _errorMessage = null;
+                      });
+                    },
+                    child: Icon(
+                      Icons.close,
+                      color: Colors.red.shade700,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           _isLoading
               ? const CircularProgressIndicator()
               : _loginSuccess
               ? Container(
                 padding: const EdgeInsets.all(16.0),
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
                 decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(8.0),
+                  color: Colors.green.shade600,
+                  borderRadius: BorderRadius.circular(12.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    SizedBox(width: 8),
+                    Icon(Icons.check_circle, color: Colors.white, size: 24),
+                    SizedBox(width: 12),
                     Text(
-                      'LOGIN SUCCESSFUL',
+                      'LOGIN SUCCESSFUL!',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
                   ],
                 ),
               )
               : ElevatedButton(onPressed: _submit, child: const Text("LOGIN")),
+          const SizedBox(height: 8.0),
+          // Test navigation button for debugging
+          if (true) // Set to false to hide
+            TextButton(
+              onPressed: _testNavigation,
+              child: const Text(
+                "TEST NAVIGATION",
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ),
           const SizedBox(height: 16.0),
           AlreadyHaveAnAccountCheck(
             login: true,

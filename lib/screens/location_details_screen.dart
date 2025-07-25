@@ -104,7 +104,7 @@ class LocationDetailsScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '${carWash.averageRating.toStringAsFixed(1)}',
+                                    carWash.averageRating.toStringAsFixed(1),
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -211,7 +211,7 @@ class LocationDetailsScreen extends StatelessWidget {
                     child: _buildStatCard(
                       'Rating',
                       carWash.averageRating > 0
-                          ? '${carWash.averageRating.toStringAsFixed(1)}'
+                          ? carWash.averageRating.toStringAsFixed(1)
                           : 'New',
                       Icons.star,
                       Colors.orange,
@@ -755,7 +755,7 @@ class LocationDetailsScreen extends StatelessWidget {
                                                 ],
                                               ),
                                             );
-                                          }).toList(),
+                                          }),
                                         ],
                                       ),
                                     ),
@@ -776,7 +776,8 @@ class LocationDetailsScreen extends StatelessWidget {
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            '${locationService.averageRating.toStringAsFixed(1)}',
+                                            locationService.averageRating
+                                                .toStringAsFixed(1),
                                             style: TextStyle(
                                               color: Colors.grey[600],
                                               fontSize: 12,

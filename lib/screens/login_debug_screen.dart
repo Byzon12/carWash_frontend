@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../api/api_connect.dart';
 import '../services/connection_service.dart';
-import 'dart:convert';
 
 class LoginDebugScreen extends StatefulWidget {
-  const LoginDebugScreen({Key? key}) : super(key: key);
+  const LoginDebugScreen({super.key});
 
   @override
   State<LoginDebugScreen> createState() => _LoginDebugScreenState();

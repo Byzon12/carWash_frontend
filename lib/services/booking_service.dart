@@ -89,8 +89,10 @@ class Booking {
   factory Booking.fromJson(Map<String, dynamic> json) {
     print('[DEBUG] Booking.fromJson: Parsing booking data: $json');
 
-    // Parse booking ID more robustly
+    // Parse booking ID more robustly - try multiple possible field names
     int bookingId = 0;
+
+    // Try 'id' field first
     if (json['id'] != null) {
       if (json['id'] is int) {
         bookingId = json['id'];
@@ -100,7 +102,21 @@ class Booking {
         bookingId = int.tryParse(json['id'].toString()) ?? 0;
       }
     }
-    print('[DEBUG] Booking.fromJson: Parsed booking ID: $bookingId');
+
+    // If id is 0 or not found, try 'booking_id' field
+    if (bookingId == 0 && json['booking_id'] != null) {
+      if (json['booking_id'] is int) {
+        bookingId = json['booking_id'];
+      } else if (json['booking_id'] is String) {
+        bookingId = int.tryParse(json['booking_id']) ?? 0;
+      } else {
+        bookingId = int.tryParse(json['booking_id'].toString()) ?? 0;
+      }
+    }
+
+    print(
+      '[DEBUG] Booking.fromJson: Parsed booking ID: $bookingId from fields id=${json['id']}, booking_id=${json['booking_id']}',
+    );
 
     return Booking(
       id: bookingId,
@@ -226,8 +242,15 @@ class BookingService {
       print('[DEBUG] BookingService: Response body: ${response.body}');
 
       if (response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        return Booking.fromJson(data);
+        final responseData = jsonDecode(response.body);
+
+        // Extract the actual booking data from the response
+        if (responseData['data'] != null) {
+          return Booking.fromJson(responseData['data']);
+        } else {
+          // Fallback: try to parse the entire response as booking data
+          return Booking.fromJson(responseData);
+        }
       } else {
         final errorData = jsonDecode(response.body);
         throw Exception(errorData['message'] ?? 'Failed to create booking');
@@ -334,8 +357,15 @@ class BookingService {
       print('[DEBUG] BookingService: Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return Booking.fromJson(data);
+        final responseData = jsonDecode(response.body);
+
+        // Handle response structure - check if data is nested
+        if (responseData['data'] != null) {
+          return Booking.fromJson(responseData['data']);
+        } else {
+          // Fallback: try to parse the entire response as booking data
+          return Booking.fromJson(responseData);
+        }
       } else {
         print(
           '[ERROR] BookingService: Failed to fetch booking details: ${response.statusCode}',
@@ -389,6 +419,51 @@ class BookingService {
       }
     } catch (e) {
       print('[ERROR] BookingService: Error cancelling booking: $e');
+      rethrow;
+    }
+  }
+
+  // Delete a booking permanently
+  static Future<bool> deleteBooking(int bookingId) async {
+    print('[DEBUG] BookingService: Deleting booking ID: $bookingId');
+
+    try {
+      final isConnected = await ConnectionService.isBackendAvailable();
+      if (!isConnected) {
+        print('[ERROR] BookingService: No backend connection available');
+        throw Exception(
+          'Backend server is not reachable. Please check your connection.',
+        );
+      }
+
+      final token = await ApiConnect.getAccessToken();
+      if (token == null) {
+        print('[ERROR] BookingService: No authentication token found');
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      final url = Uri.parse('$baseUrl$bookingEndpoint/delete/$bookingId/');
+      print('[DEBUG] BookingService: DELETE $url');
+
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('[DEBUG] BookingService: Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('[DEBUG] BookingService: Booking deleted successfully');
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to delete booking');
+      }
+    } catch (e) {
+      print('[ERROR] BookingService: Error deleting booking: $e');
       rethrow;
     }
   }
@@ -523,8 +598,15 @@ class BookingService {
       print('[DEBUG] BookingService: Response body: ${response.body}');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return Booking.fromJson(data);
+        final responseData = jsonDecode(response.body);
+
+        // Handle response structure - check if data is nested
+        if (responseData['data'] != null) {
+          return Booking.fromJson(responseData['data']);
+        } else {
+          // Fallback: try to parse the entire response as booking data
+          return Booking.fromJson(responseData);
+        }
       } else {
         final errorData = jsonDecode(response.body);
         throw Exception(errorData['message'] ?? 'Failed to update booking');
@@ -688,8 +770,15 @@ class BookingService {
       print('[DEBUG] BookingService: Response body: ${response.body}');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return Booking.fromJson(data);
+        final responseData = jsonDecode(response.body);
+
+        // Handle response structure - check if data is nested
+        if (responseData['data'] != null) {
+          return Booking.fromJson(responseData['data']);
+        } else {
+          // Fallback: try to parse the entire response as booking data
+          return Booking.fromJson(responseData);
+        }
       } else {
         final errorData = jsonDecode(response.body);
         throw Exception(errorData['message'] ?? 'Failed to reschedule booking');

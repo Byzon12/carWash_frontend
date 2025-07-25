@@ -1,10 +1,15 @@
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 class ConnectionService {
-  static const Duration _defaultTimeout = Duration(seconds: 30);
+  static const Duration _defaultTimeout = Duration(
+    seconds: 10,
+  ); // Reduced timeout
+  static DateTime? _lastSuccessfulCheck;
+  static const Duration _cacheValidDuration = Duration(
+    minutes: 2,
+  ); // Cache results for 2 minutes
 
   // Test multiple backend URLs to find the working one
   static List<String> get _testUrls {
@@ -33,7 +38,7 @@ class ConnectionService {
 
         final response = await http
             .get(
-              Uri.parse('${baseUrl}user/'),
+              Uri.parse(baseUrl),
               headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
@@ -64,8 +69,25 @@ class ConnectionService {
 
   /// Check if the backend is running and accessible
   static Future<bool> isBackendAvailable() async {
+    // Use cached result if recent check was successful
+    if (_lastSuccessfulCheck != null &&
+        DateTime.now().difference(_lastSuccessfulCheck!) <
+            _cacheValidDuration) {
+      print(
+        '[DEBUG] ConnectionService: Using cached successful connection result',
+      );
+      return true;
+    }
+
     final workingUrl = await findWorkingBackendUrl();
-    return workingUrl != null;
+    final isAvailable = workingUrl != null;
+
+    if (isAvailable) {
+      _lastSuccessfulCheck = DateTime.now();
+      print('[DEBUG] ConnectionService: Backend available, caching result');
+    }
+
+    return isAvailable;
   }
 
   /// Get the current network status
@@ -91,7 +113,7 @@ class ConnectionService {
 
         final response = await http
             .get(
-              Uri.parse('${baseUrl}user/'),
+              Uri.parse(baseUrl),
               headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',

@@ -14,15 +14,11 @@ class ConnectionService {
   // Test multiple backend URLs to find the working one
   static List<String> get _testUrls {
     if (kIsWeb) {
-      return [
-        'http://localhost:8000/',
-        'http://127.0.0.1:8000/',
-        'http://0.0.0.0:8000/',
-      ];
+      return ['http://192.168.0.104:8000/'];
     } else {
       return [
-        'http://127.0.0.1:8000/',
-        'http://localhost:8000/',
+        'http://192.168.0.104:8000/',
+        'http://192.168.0.104:8000/',
         'http://10.0.2.2:8000/', // Android emulator
       ];
     }

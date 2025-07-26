@@ -4,15 +4,49 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
 
 class ApiConnect {
-  // Dynamic base URL based on platform
+  // Dynamic base URL based on platform and debug mode
   static String get baseUrl {
     if (kIsWeb) {
       // For web development, use localhost
       return 'http://localhost:8000/';
     } else {
-      // For mobile development
-      return 'http://127.0.0.1:8000/';
+      // For mobile development - check if debugging wirelessly
+      if (kDebugMode) {
+        // For wireless debugging, use your computer's IP address
+        return 'http://$_wirelessDebugIP:8000/';
+      } else {
+        // For production or emulator
+        return 'http://127.0.0.1:8000/';
+      }
     }
+  }
+
+  // Configuration for wireless debugging
+  // TODO: Update this IP address to match your computer's IP address
+  static const String _wirelessDebugIP =
+      '192.168.0.104'; // Your actual WiFi IP!
+
+  // Helper method to get your computer's IP for wireless debugging
+  static void printNetworkInstructions() {
+    print('=== WIRELESS DEBUGGING SETUP ===');
+    print('Current base URL: $baseUrl');
+    print('Current platform: ${kIsWeb ? "Web" : "Mobile"}');
+    print('Debug mode: $kDebugMode');
+    print('Configured IP: $_wirelessDebugIP:8000');
+    print('');
+    print('TROUBLESHOOTING STEPS:');
+    print('1. Open Command Prompt and run: ipconfig');
+    print('2. Find your WiFi adapter IPv4 Address (usually 192.168.x.x)');
+    print('3. Update _wirelessDebugIP in api_connect.dart with that IP');
+    print('4. Make sure your phone and computer are on the same WiFi network');
+    print('5. Ensure your backend server is running on port 8000');
+    print('6. Check Windows Firewall settings');
+    print('');
+    print('COMMON IPs to try:');
+    print('- 192.168.1.x (most common home routers)');
+    print('- 192.168.0.x (some routers)');
+    print('- 10.0.0.x (some networks)');
+    print('================================');
   }
 
   // User authentication base URL
@@ -430,6 +464,60 @@ class ApiConnect {
       print('[ERROR] ApiConnect: Exception fetching locations: $e');
       print('[ERROR] ApiConnect: Stack trace: $stackTrace');
       return null;
+    }
+  }
+
+  // Test network connectivity to backend
+  static Future<bool> testConnectivity() async {
+    print('[DEBUG] ApiConnect: === CONNECTIVITY TEST ===');
+    print('[DEBUG] ApiConnect: Testing connectivity to $baseUrl');
+
+    try {
+      // Test multiple endpoints to see which one responds
+      final testUrls = [
+        '${baseUrl}', // Base URL
+        '${baseUrl}ping/', // Ping endpoint
+        '${userBaseUrl}', // User endpoint
+        '${userBaseUrl}login/', // Login endpoint
+      ];
+
+      for (String testUrl in testUrls) {
+        try {
+          print('[DEBUG] ApiConnect: Testing URL: $testUrl');
+          final url = Uri.parse(testUrl);
+          final response = await http
+              .get(url)
+              .timeout(
+                const Duration(seconds: 3),
+                onTimeout: () {
+                  print('[TIMEOUT] ApiConnect: $testUrl timed out');
+                  throw Exception('Timeout');
+                },
+              );
+
+          print(
+            '[SUCCESS] ApiConnect: $testUrl responded with status ${response.statusCode}',
+          );
+          if (response.statusCode < 500) {
+            print('[DEBUG] ApiConnect: Server is reachable!');
+            return true;
+          }
+        } catch (e) {
+          print('[FAILED] ApiConnect: $testUrl failed: $e');
+        }
+      }
+
+      print('[ERROR] ApiConnect: All connectivity tests failed');
+      return false;
+    } catch (e) {
+      print('[ERROR] ApiConnect: Connectivity test exception: $e');
+      print('[ERROR] ApiConnect: TROUBLESHOOTING CHECKLIST:');
+      print('  ✓ Backend server running? Check terminal/console');
+      print('  ✓ Correct IP in _wirelessDebugIP? Run ipconfig');
+      print('  ✓ Same WiFi network? Check phone and computer WiFi');
+      print('  ✓ Windows Firewall? Try temporarily disabling');
+      print('  ✓ Port 8000 open? Try: telnet $_wirelessDebugIP 8000');
+      return false;
     }
   }
 }

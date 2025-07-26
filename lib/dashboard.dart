@@ -25,8 +25,23 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
+    // Print network setup instructions for wireless debugging
+    ApiConnect.printNetworkInstructions();
+    // Test connectivity immediately
+    _testConnectivityOnStart();
     _carWashesFuture = carWashes(); // Load car washes from API
     _requestLocation();
+  }
+
+  // Test connectivity when the app starts
+  Future<void> _testConnectivityOnStart() async {
+    print('[DEBUG] Dashboard: Testing backend connectivity...');
+    final isConnected = await ApiConnect.testConnectivity();
+    if (isConnected) {
+      print('[SUCCESS] Dashboard: Backend connection successful!');
+    } else {
+      print('[ERROR] Dashboard: Backend connection failed!');
+    }
   }
 
   double calculateDistance(double lat1, double lon1, double lat2, double lon2) {

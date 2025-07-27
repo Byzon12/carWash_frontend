@@ -351,10 +351,26 @@ class ApiConnect {
     String? phoneNumber,
   }) async {
     try {
+      print('[DEBUG] ApiConnect: Updating user profile...');
       final token = await getAccessToken();
-      if (token == null) return null;
+      if (token == null) {
+        print('[ERROR] ApiConnect: No access token for profile update');
+        return null;
+      }
 
       final url = Uri.parse('${userBaseUrl}profile/');
+      final requestBody = {
+        'username': username,
+        'email': email,
+        'first_name': firstName,
+        'last_name': lastName,
+        if (address != null) 'address': address,
+        if (phoneNumber != null) 'phone_number': phoneNumber,
+      };
+
+      print('[DEBUG] ApiConnect: Profile update URL: $url');
+      print('[DEBUG] ApiConnect: Profile update request body: $requestBody');
+
       final response = await http
           .put(
             url,
@@ -362,19 +378,20 @@ class ApiConnect {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $token',
             },
-            body: jsonEncode({
-              'username': username,
-              'email': email,
-              'first_name': firstName,
-              'last_name': lastName,
-              if (address != null) 'address': address,
-              if (phoneNumber != null) 'phone_number': phoneNumber,
-            }),
+            body: jsonEncode(requestBody),
           )
           .timeout(const Duration(seconds: 10));
 
+      print(
+        '[DEBUG] ApiConnect: Profile update response status: ${response.statusCode}',
+      );
+      print(
+        '[DEBUG] ApiConnect: Profile update response body: ${response.body}',
+      );
+
       return response;
     } catch (e) {
+      print('[ERROR] ApiConnect: Exception during profile update: $e');
       return null;
     }
   }
@@ -463,6 +480,143 @@ class ApiConnect {
     } catch (e, stackTrace) {
       print('[ERROR] ApiConnect: Exception fetching locations: $e');
       print('[ERROR] ApiConnect: Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  // Loyalty Points API Methods
+
+  // Get loyalty dashboard data
+  static Future<http.Response?> getLoyaltyDashboard() async {
+    try {
+      print('[DEBUG] ApiConnect: Fetching loyalty dashboard...');
+      final token = await getAccessToken();
+      if (token == null) {
+        print('[ERROR] ApiConnect: No access token for loyalty dashboard');
+        return null;
+      }
+
+      final url = Uri.parse('${userBaseUrl}loyalty/dashboard/');
+      print('[DEBUG] ApiConnect: Loyalty dashboard URL: $url');
+
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+
+      print(
+        '[DEBUG] ApiConnect: Loyalty dashboard response status: ${response.statusCode}',
+      );
+      print(
+        '[DEBUG] ApiConnect: Loyalty dashboard response body: ${response.body}',
+      );
+
+      return response;
+    } catch (e, stackTrace) {
+      print('[ERROR] ApiConnect: Exception fetching loyalty dashboard: $e');
+      print('[ERROR] ApiConnect: Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  // Get loyalty points history
+  static Future<http.Response?> getLoyaltyHistory() async {
+    try {
+      print('[DEBUG] ApiConnect: Fetching loyalty history...');
+      final token = await getAccessToken();
+      if (token == null) {
+        print('[ERROR] ApiConnect: No access token for loyalty history');
+        return null;
+      }
+
+      final url = Uri.parse('${userBaseUrl}loyalty/history/');
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+
+      print(
+        '[DEBUG] ApiConnect: Loyalty history response status: ${response.statusCode}',
+      );
+      return response;
+    } catch (e) {
+      print('[ERROR] ApiConnect: Exception fetching loyalty history: $e');
+      return null;
+    }
+  }
+
+  // Redeem loyalty points
+  static Future<http.Response?> redeemLoyaltyPoints({
+    required int points,
+    required String rewardType,
+  }) async {
+    try {
+      print('[DEBUG] ApiConnect: Redeeming loyalty points...');
+      final token = await getAccessToken();
+      if (token == null) {
+        print('[ERROR] ApiConnect: No access token for loyalty redemption');
+        return null;
+      }
+
+      final url = Uri.parse('${userBaseUrl}loyalty/redeem/');
+      final response = await http
+          .post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({'points': points, 'reward_type': rewardType}),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      print(
+        '[DEBUG] ApiConnect: Loyalty redemption response status: ${response.statusCode}',
+      );
+      return response;
+    } catch (e) {
+      print('[ERROR] ApiConnect: Exception redeeming loyalty points: $e');
+      return null;
+    }
+  }
+
+  // Get loyalty tier information
+  static Future<http.Response?> getLoyaltyTierInfo() async {
+    try {
+      print('[DEBUG] ApiConnect: Fetching loyalty tier info...');
+      final token = await getAccessToken();
+      if (token == null) {
+        print('[ERROR] ApiConnect: No access token for loyalty tier info');
+        return null;
+      }
+
+      final url = Uri.parse('${userBaseUrl}loyalty/tier-info/');
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+
+      print(
+        '[DEBUG] ApiConnect: Loyalty tier info response status: ${response.statusCode}',
+      );
+      return response;
+    } catch (e) {
+      print('[ERROR] ApiConnect: Exception fetching loyalty tier info: $e');
       return null;
     }
   }

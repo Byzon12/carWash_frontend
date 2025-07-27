@@ -5,6 +5,7 @@ import 'dart:convert';
 import '../utilites/provider.dart';
 import '../models/cars.dart';
 import '../api/api_connect.dart';
+import '../screens/loyalty_points_screen.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, required List<Booking> bookings});
@@ -32,6 +33,7 @@ class _ProfilePageState extends State<ProfilePage> {
     print('[DEBUG] ProfilePage: Initializing ProfilePage');
     _initializeControllers();
     _loadUserProfile();
+    _loadLoyaltyPoints(); // Load loyalty points when page initializes
     print('[DEBUG] ProfilePage: ProfilePage initialization completed');
   }
 
@@ -59,10 +61,12 @@ class _ProfilePageState extends State<ProfilePage> {
     print('[DEBUG] ProfilePage: ProfilePage disposed successfully');
   }
 
-  Future<void> _loadUserProfile() async {
+  Future<void> _loadUserProfile([bool showLoading = true]) async {
     try {
       print('[DEBUG] ProfilePage: Starting to load user profile');
-      setState(() => _loading = true);
+      if (showLoading) {
+        setState(() => _loading = true);
+      }
 
       // Try to get profile from API first
       print('[DEBUG] ProfilePage: Attempting to fetch profile from API');
@@ -81,6 +85,12 @@ class _ProfilePageState extends State<ProfilePage> {
           _userProfile = profile;
           _updateControllers();
         });
+
+        // Also load loyalty points only during full refresh
+        if (showLoading) {
+          await _loadLoyaltyPoints();
+        }
+
         print('[DEBUG] ProfilePage: Profile loaded successfully from API');
       } else {
         print(
@@ -93,8 +103,8 @@ class _ProfilePageState extends State<ProfilePage> {
       print('[ERROR] ProfilePage: Exception in _loadUserProfile: $e');
       print('[ERROR] ProfilePage: Stack trace: $stackTrace');
 
-      // Show user-friendly error message
-      if (mounted) {
+      // Show user-friendly error message only during full refresh
+      if (mounted && showLoading) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -109,7 +119,9 @@ class _ProfilePageState extends State<ProfilePage> {
       // Fallback to stored user data
       await _loadStoredUserData();
     } finally {
-      setState(() => _loading = false);
+      if (showLoading) {
+        setState(() => _loading = false);
+      }
       print('[DEBUG] ProfilePage: Profile loading completed');
     }
   }
@@ -212,6 +224,41 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  void _navigateToLoyaltyDashboard() {
+    print('[DEBUG] ProfilePage: Navigating to loyalty dashboard');
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const LoyaltyPointsScreen()),
+    );
+  }
+
+  Future<void> _loadLoyaltyPoints() async {
+    try {
+      print('[DEBUG] ProfilePage: Loading loyalty points from API');
+      final response = await ApiConnect.getLoyaltyDashboard();
+
+      if (response != null && response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          final loyaltyStats = data['data']['loyalty_stats'];
+          setState(() {
+            _userProfile ??= {};
+            _userProfile!['loyalty_points'] = loyaltyStats['current_points'];
+          });
+          print(
+            '[DEBUG] ProfilePage: Loyalty points updated: ${loyaltyStats['current_points']}',
+          );
+        }
+      } else {
+        print(
+          '[DEBUG] ProfilePage: Failed to load loyalty points, using default',
+        );
+      }
+    } catch (e) {
+      print('[ERROR] ProfilePage: Exception loading loyalty points: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     print(
@@ -243,15 +290,12 @@ class _ProfilePageState extends State<ProfilePage> {
             },
             tooltip: 'Change Password',
           ),
-          if (!_isEditing)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                print('[DEBUG] ProfilePage: Edit button pressed');
-                setState(() => _isEditing = true);
-              },
-              tooltip: 'Edit Profile',
-            ),
+          // Logout button moved to top corner
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _logout,
+            tooltip: 'Logout',
+          ),
           if (_isEditing)
             TextButton(
               onPressed: () {
@@ -352,20 +396,33 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ],
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('🏆', style: TextStyle(fontSize: 14)),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${_userProfile?['loyalty_points'] ?? 0} Loyalty Points',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.orange.shade800,
-                                  fontWeight: FontWeight.bold,
+                          child: InkWell(
+                            onTap: () => _navigateToLoyaltyDashboard(),
+                            borderRadius: BorderRadius.circular(15),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  '🏆',
+                                  style: TextStyle(fontSize: 14),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${_userProfile?['loyalty_points'] ?? 0} Loyalty Points',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange.shade800,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 12,
+                                  color: Colors.orange.shade800,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -486,20 +543,29 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildActionButtons() {
     return Center(
       child: SizedBox(
-        width: 200, // Smaller width for logout button
-        child: ElevatedButton.icon(
-          onPressed: _logout,
-          icon: const Icon(Icons.logout, size: 18),
-          label: const Text('Logout'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
-        ),
+        width: 200, // Width for edit button
+        child:
+            !_isEditing
+                ? ElevatedButton.icon(
+                  onPressed: () {
+                    print('[DEBUG] ProfilePage: Edit button pressed');
+                    setState(() => _isEditing = true);
+                  },
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: const Text('Edit Profile'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                )
+                : const SizedBox.shrink(), // Hide when editing (save/cancel are in AppBar)
       ),
     );
   }
@@ -618,7 +684,15 @@ class _ProfilePageState extends State<ProfilePage> {
                 : null,
       );
 
-      if (response != null && response.statusCode == 200) {
+      print(
+        '[DEBUG] ProfilePage: API response status: ${response?.statusCode}',
+      );
+      if (response != null) {
+        print('[DEBUG] ProfilePage: API response body: ${response.body}');
+      }
+
+      if (response != null &&
+          (response.statusCode == 200 || response.statusCode == 201)) {
         print(
           '[DEBUG] ProfilePage: API update successful, status: ${response.statusCode}',
         );
@@ -650,28 +724,16 @@ class _ProfilePageState extends State<ProfilePage> {
           value: _phoneNumberController.text.trim(),
         );
 
-        // Update the profile data
-        final updatedProfile = {
-          'username': _usernameController.text.trim(),
-          'email': _emailController.text.trim(),
-          'first_name': _firstNameController.text.trim(),
-          'last_name': _lastNameController.text.trim(),
-          'address': _addressController.text.trim(),
-          'phone_number': _phoneNumberController.text.trim(),
-        };
-
+        // Exit editing mode first
         setState(() {
-          _userProfile = updatedProfile;
-          // Preserve loyalty_points since it's not editable
-          if (_userProfile != null) {
-            updatedProfile['loyalty_points'] =
-                _userProfile!['loyalty_points'] ?? 0;
-          }
-          _userProfile = updatedProfile;
           _isEditing = false;
         });
 
-        print('[DEBUG] ProfilePage: Profile saved successfully');
+        // Reload profile data from server to get the latest changes
+        print('[DEBUG] ProfilePage: Reloading profile data from server');
+        await _loadUserProfile(false); // Don't show loading spinner
+
+        print('[DEBUG] ProfilePage: Profile saved and reloaded successfully');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -685,7 +747,9 @@ class _ProfilePageState extends State<ProfilePage> {
         print(
           '[ERROR] ProfilePage: API update failed - Status: ${response?.statusCode}',
         );
-        print('[ERROR] ProfilePage: API response body: ${response?.body}');
+        if (response != null) {
+          print('[ERROR] ProfilePage: API response body: ${response.body}');
+        }
 
         String errorMessage = 'Failed to update profile on server';
         if (response != null) {
@@ -695,10 +759,14 @@ class _ProfilePageState extends State<ProfilePage> {
               errorMessage = errorData['detail'];
             } else if (errorData['error'] != null) {
               errorMessage = errorData['error'];
+            } else if (errorData['message'] != null) {
+              errorMessage = errorData['message'];
             }
           } catch (e) {
             print('[WARNING] ProfilePage: Could not parse error response: $e');
           }
+        } else {
+          errorMessage = 'Network error: Could not connect to server';
         }
 
         if (mounted) {

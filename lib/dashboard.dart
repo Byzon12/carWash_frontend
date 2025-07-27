@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'models/cars.dart';
 import 'page.dart';
 import 'api/api_connect.dart';
@@ -19,8 +20,11 @@ class _DashboardPageState extends State<DashboardPage> {
   final Location location = Location();
   LocationData? _userLocation;
   bool _locationLoading = true;
-  String? _locationError;
   Future<List<CarWash>>? _carWashesFuture;
+  GoogleMapController? _mapController;
+
+  // Kenya center coordinates
+  static const LatLng _kenyaCenter = LatLng(-0.0236, 37.9062);
 
   @override
   void initState() {
@@ -30,7 +34,12 @@ class _DashboardPageState extends State<DashboardPage> {
     // Test connectivity immediately
     _testConnectivityOnStart();
     _carWashesFuture = carWashes(); // Load car washes from API
-    _requestLocation();
+    // Request location with a small delay to let the UI load first
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        _requestLocation();
+      }
+    });
   }
 
   // Test connectivity when the app starts
@@ -57,28 +66,78 @@ class _DashboardPageState extends State<DashboardPage> {
     try {
       bool serviceEnabled = await location.serviceEnabled();
       if (!serviceEnabled) {
-        serviceEnabled = await location.requestService();
+        // Show user-friendly dialog for enabling location service
+        final shouldEnable = await _showLocationDialog(
+          'Enable Location Service',
+          'To show your location on the map and find nearby car washes, please enable location service on your device.',
+          'Enable Location',
+        );
+
+        if (shouldEnable) {
+          serviceEnabled = await location.requestService();
+        }
+
         if (!serviceEnabled) {
-          // Don't treat as error - just continue without location
           setState(() {
             _userLocation = null;
             _locationLoading = false;
-            _locationError = null;
           });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      'Location service disabled. You can still browse car washes.',
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
           return;
         }
       }
 
       PermissionStatus permissionGranted = await location.hasPermission();
       if (permissionGranted == PermissionStatus.denied) {
-        permissionGranted = await location.requestPermission();
+        // Show user-friendly dialog for location permission
+        final shouldRequest = await _showLocationDialog(
+          'Location Permission Required',
+          'Would you like to enable location access? This will help us:\n\n• Show your position on the map\n• Find nearest car washes\n• Calculate distances\n\nYour location is only used within the app and never shared.',
+          'Grant Permission',
+        );
+
+        if (shouldRequest) {
+          permissionGranted = await location.requestPermission();
+        }
+
         if (permissionGranted != PermissionStatus.granted) {
-          // Don't treat as error - just continue without location
           setState(() {
             _userLocation = null;
             _locationLoading = false;
-            _locationError = null;
           });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      'Location access denied. You can still browse car washes.',
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
           return;
         }
       }
@@ -87,16 +146,126 @@ class _DashboardPageState extends State<DashboardPage> {
       setState(() {
         _userLocation = userLoc;
         _locationLoading = false;
-        _locationError = null;
       });
+
+      // Center map on user location after getting it
+      if (_mapController != null &&
+          userLoc.latitude != null &&
+          userLoc.longitude != null) {
+        await _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: LatLng(userLoc.latitude!, userLoc.longitude!),
+              zoom: 12.0,
+            ),
+          ),
+        );
+      }
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.location_on, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(
+                  'Location enabled! Your position: ${userLoc.latitude?.toStringAsFixed(3)}, ${userLoc.longitude?.toStringAsFixed(3)}',
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } catch (e) {
-      // If location fails, just continue without it instead of showing error
       setState(() {
         _userLocation = null;
         _locationLoading = false;
-        _locationError = null;
       });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('Error getting location: ${e.toString()}'),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
+  }
+
+  Future<bool> _showLocationDialog(
+    String title,
+    String content,
+    String actionText,
+  ) async {
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Row(
+                children: [
+                  const Icon(Icons.location_searching, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(title)),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(content),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info, color: Colors.blue, size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'You can change this later in your device settings.',
+                            style: TextStyle(fontSize: 12, color: Colors.blue),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Not Now'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(actionText),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
   }
 
   List<CarWash> _getNearestCarWashes(List<CarWash> carWashList) {
@@ -123,6 +292,63 @@ class _DashboardPageState extends State<DashboardPage> {
     });
 
     return sorted;
+  }
+
+  Set<Marker> _createCarWashMarkers(List<CarWash> carWashes) {
+    Set<Marker> markers =
+        carWashes.map((carWash) {
+          return Marker(
+            markerId: MarkerId(carWash.id),
+            position: LatLng(carWash.latitude, carWash.longitude),
+            infoWindow: InfoWindow(
+              title: carWash.name,
+              snippet: '${carWash.services.length} services available',
+              onTap: () {
+                // Navigate to car wash details when marker is tapped
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => LocationDetailsScreen(carWash: carWash),
+                  ),
+                );
+              },
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueBlue,
+            ),
+          );
+        }).toSet();
+
+    // Add user location marker if available
+    if (_userLocation != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('user_location'),
+          position: LatLng(_userLocation!.latitude!, _userLocation!.longitude!),
+          infoWindow: const InfoWindow(
+            title: 'Your Location',
+            snippet: 'You are here',
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+      );
+    }
+
+    return markers;
+  }
+
+  void _centerMapOnUser() async {
+    if (_mapController != null && _userLocation != null) {
+      await _mapController!.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(_userLocation!.latitude!, _userLocation!.longitude!),
+            zoom: 12.0,
+          ),
+        ),
+      );
+    }
   }
 
   bool isOpenNow(String openHours) {
@@ -157,6 +383,12 @@ class _DashboardPageState extends State<DashboardPage> {
     } catch (_) {
       return false;
     }
+  }
+
+  @override
+  void dispose() {
+    _mapController?.dispose();
+    super.dispose();
   }
 
   @override
@@ -224,168 +456,278 @@ class _DashboardPageState extends State<DashboardPage> {
         }
 
         final carWashList = carWashSnapshot.data ?? [];
-        if (carWashList.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.local_car_wash, size: 48, color: Colors.grey),
-                SizedBox(height: 16),
-                Text('No car washes available at the moment'),
-              ],
-            ),
-          );
-        }
-
         final nearestCarWashes = _getNearestCarWashes(carWashList);
 
-        return Column(
-          children: [
-            Container(
-              height: 150,
-              margin: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
-                    spreadRadius: 2,
-                    blurRadius: 5,
-                    offset: const Offset(0, 3),
+        // Always show the map, regardless of car wash data
+        return Scaffold(
+          body: Column(
+            children: [
+              // Google Maps section - always visible
+              Container(
+                height: 200, // Increased height for better map view
+                margin: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withOpacity(0.3),
+                      spreadRadius: 2,
+                      blurRadius: 5,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: GoogleMap(
+                    onMapCreated: (GoogleMapController controller) {
+                      _mapController = controller;
+                      // If we already have user location, center on it
+                      if (_userLocation != null) {
+                        Future.delayed(const Duration(milliseconds: 500), () {
+                          _centerMapOnUser();
+                        });
+                      }
+                    },
+                    initialCameraPosition: CameraPosition(
+                      target:
+                          _userLocation != null
+                              ? LatLng(
+                                _userLocation!.latitude!,
+                                _userLocation!.longitude!,
+                              )
+                              : _kenyaCenter,
+                      zoom: _userLocation != null ? 12.0 : 6.0,
+                    ),
+                    markers: _createCarWashMarkers(nearestCarWashes),
+                    mapType: MapType.normal,
+                    zoomGesturesEnabled: true,
+                    scrollGesturesEnabled: true,
+                    tiltGesturesEnabled: false,
+                    rotateGesturesEnabled: false,
+                    myLocationEnabled: _userLocation != null,
+                    myLocationButtonEnabled:
+                        false, // We'll use our custom button
+                    compassEnabled: true,
+                    mapToolbarEnabled: false,
                   ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Kenya_location_map.svg/800px-Kenya_location_map.svg.png',
-                  fit: BoxFit.cover,
-                  errorBuilder:
-                      (context, error, stackTrace) => Container(
-                        color: Colors.blue[200],
-                        child: const Center(child: Icon(Icons.map)),
-                      ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8,
+
+              // Location status section
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _userLocation != null
+                          ? Icons.location_on
+                          : _locationLoading
+                          ? Icons.location_searching
+                          : Icons.location_off,
+                      color:
+                          _userLocation != null
+                              ? Colors.green
+                              : _locationLoading
+                              ? Colors.orange
+                              : Colors.grey,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _locationLoading
+                            ? 'Getting your location...'
+                            : _userLocation != null
+                            ? 'Showing ${nearestCarWashes.length} car washes near you'
+                            : carWashList.isEmpty
+                            ? 'Loading car wash locations...'
+                            : 'Showing ${nearestCarWashes.length} car washes in Kenya (enable location to see distances)',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color:
+                              _userLocation != null
+                                  ? Colors.green[700]
+                                  : _locationLoading
+                                  ? Colors.orange[700]
+                                  : Colors.blue[700],
+                        ),
+                      ),
+                    ),
+                    if (!_locationLoading && _userLocation == null)
+                      TextButton(
+                        onPressed: _requestLocation,
+                        child: const Text(
+                          'Enable',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.location_pin, color: Colors.blue),
-                  const SizedBox(width: 8),
-                  Text(
-                    _locationLoading
-                        ? 'Loading location...'
-                        : _userLocation != null
-                        ? 'Nearest car washes to you (${nearestCarWashes.length} found)'
-                        : 'Car wash locations (${nearestCarWashes.length} found)',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blue[700],
+
+              // Car wash list section
+              Expanded(
+                child:
+                    carWashList.isEmpty
+                        ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.local_car_wash,
+                                size: 48,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'No car washes available at the moment',
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _carWashesFuture =
+                                        carWashes(); // Retry API call
+                                  });
+                                },
+                                child: const Text('Refresh'),
+                              ),
+                            ],
+                          ),
+                        )
+                        : ListView.builder(
+                          padding: const EdgeInsets.all(10),
+                          itemCount: nearestCarWashes.length,
+                          itemBuilder: (context, index) {
+                            final carWash = nearestCarWashes[index];
+                            final openStatus =
+                                isOpenNow(carWash.openHours)
+                                    ? 'Open now'
+                                    : 'Closed';
+
+                            // Calculate distance only if we have user location
+                            String distanceText = '';
+                            if (_userLocation != null && !_locationLoading) {
+                              final distanceKm = calculateDistance(
+                                _userLocation!.latitude!,
+                                _userLocation!.longitude!,
+                                carWash.latitude,
+                                carWash.longitude,
+                              );
+                              distanceText =
+                                  '${distanceKm.toStringAsFixed(2)} km away';
+                            }
+
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              child: ListTile(
+                                leading: Image.network(
+                                  carWash.imageUrl,
+                                  width: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (context, error, stackTrace) => Container(
+                                        width: 80,
+                                        color: Colors.grey[300],
+                                        child: const Icon(Icons.local_car_wash),
+                                      ),
+                                ),
+                                title: Text(carWash.name),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(carWash.location),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Open Hours: ${carWash.openHours}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      openStatus,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            openStatus == 'Open now'
+                                                ? Colors.green
+                                                : Colors.red,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    if (distanceText.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        distanceText,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${carWash.services.length} services available',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.blue[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                isThreeLine: true,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => LocationDetailsScreen(
+                                            carWash: carWash,
+                                          ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+              ),
+            ],
+          ),
+          floatingActionButton:
+              _userLocation != null
+                  ? FloatingActionButton(
+                    onPressed: _centerMapOnUser,
+                    backgroundColor: Colors.blue,
+                    child: const Icon(Icons.my_location, color: Colors.white),
+                    tooltip: 'Center map on your location',
+                  )
+                  : !_locationLoading
+                  ? FloatingActionButton.extended(
+                    onPressed: _requestLocation,
+                    backgroundColor: Colors.green,
+                    icon: const Icon(Icons.location_on, color: Colors.white),
+                    label: const Text(
+                      'Enable Location',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    tooltip: 'Enable location to see your position on the map',
+                  )
+                  : FloatingActionButton(
+                    onPressed: null,
+                    backgroundColor: Colors.grey,
+                    child: const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(10),
-                itemCount: nearestCarWashes.length,
-                itemBuilder: (context, index) {
-                  final carWash = nearestCarWashes[index];
-                  final openStatus =
-                      isOpenNow(carWash.openHours) ? 'Open now' : 'Closed';
-
-                  // Calculate distance only if we have user location
-                  String distanceText = '';
-                  if (_userLocation != null && !_locationLoading) {
-                    final distanceKm = calculateDistance(
-                      _userLocation!.latitude!,
-                      _userLocation!.longitude!,
-                      carWash.latitude,
-                      carWash.longitude,
-                    );
-                    distanceText = '${distanceKm.toStringAsFixed(2)} km away';
-                  }
-
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    child: ListTile(
-                      leading: Image.network(
-                        carWash.imageUrl,
-                        width: 80,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (context, error, stackTrace) => Container(
-                              width: 80,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.local_car_wash),
-                            ),
-                      ),
-                      title: Text(carWash.name),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(carWash.location),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Open Hours: ${carWash.openHours}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            openStatus,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color:
-                                  openStatus == 'Open now'
-                                      ? Colors.green
-                                      : Colors.red,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (distanceText.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              distanceText,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ],
-                          const SizedBox(height: 4),
-                          Text(
-                            '${carWash.services.length} services available',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.blue[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                      isThreeLine: true,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) =>
-                                    LocationDetailsScreen(carWash: carWash),
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
         );
       },
     );

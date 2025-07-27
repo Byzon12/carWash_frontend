@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/cart.dart';
 import 'package:flutter_application_1/dashboard.dart';
 import 'package:flutter_application_1/his.dart';
 import 'package:flutter_application_1/profile.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_application_1/utilites/provider.dart';
-
-import 'models/cars.dart'; // Your CartProvider
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -39,32 +36,6 @@ class _HomePageState extends State<HomePage> {
       const ProfilePage(
         bookings: [],
       ), // ProfilePage reads bookings internally from provider
-
-      CartPage(
-        carWash: CarWash(
-          id: '',
-          name: '',
-          imageUrl: '',
-          services: [],
-          location: '',
-          openHours: '',
-          latitude: 0.0,
-          longitude: 0.0,
-          address: '',
-          contactNumber: '',
-          email: '',
-          locationServices: [],
-          totalServices: 0,
-          popularServices: [],
-          averageRating: 0.0,
-          totalBookings: 0,
-          completionRate: 0.0,
-          isOpen: false,
-          features: [],
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-      ),
     ];
 
     return Scaffold(
@@ -83,10 +54,6 @@ class _HomePageState extends State<HomePage> {
             label: 'Bookings',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_bag),
-            label: 'Cart',
-          ),
         ],
         type: BottomNavigationBarType.fixed,
       ),

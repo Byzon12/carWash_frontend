@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/api/api_connect.dart';
 import 'package:flutter_application_1/screens/main/login%20screens/account.dart';
 import 'package:flutter_application_1/home.dart';
+import 'package:flutter_application_1/services/location_helper.dart';
 
 import 'dart:convert';
 import 'package:flutter_application_1/screens/main/signupscreens/form.dart';
@@ -328,8 +329,12 @@ class _LoginFormState extends State<LoginForm> {
 
           // User data is already stored by ApiConnect.login() method
           print(
-            '📱 User data stored by API method, proceeding with navigation...',
+            '📱 User data stored by API method, proceeding with location setup...',
           );
+
+          // Request location permission after successful login
+          print('📍 Requesting location permission after successful login...');
+          await LocationHelper.requestLocationPermission(context);
 
           // Wait longer to show success message
           await Future.delayed(const Duration(milliseconds: 2000));

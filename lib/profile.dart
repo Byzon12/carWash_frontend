@@ -19,6 +19,11 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _loading = true;
   bool _isEditing = false;
 
+  // Booking history state
+  List<Booking> _bookingHistory = [];
+  bool _bookingHistoryLoading = false;
+  String? _bookingHistoryError;
+
   // Controllers for editable fields
   late TextEditingController _usernameController;
   late TextEditingController _emailController;
@@ -34,6 +39,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _initializeControllers();
     _loadUserProfile();
     _loadLoyaltyPoints(); // Load loyalty points when page initializes
+    _loadBookingHistory(); // Load booking history from API
     print('[DEBUG] ProfilePage: ProfilePage initialization completed');
   }
 
@@ -259,14 +265,140 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  // Load booking history from API
+  Future<void> _loadBookingHistory() async {
+    try {
+      print('[DEBUG] ProfilePage: Loading booking history from API');
+      setState(() {
+        _bookingHistoryLoading = true;
+        _bookingHistoryError = null;
+      });
+
+      final response = await ApiConnect.getUserBookingHistory();
+
+      if (response != null && response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('[DEBUG] ProfilePage: Booking history response: $data');
+
+        if (data is List) {
+          // If response is directly a list of bookings
+          _parseBookingHistory(data);
+        } else if (data['success'] == true && data['data'] != null) {
+          // If response has success wrapper
+          _parseBookingHistory(data['data']);
+        } else if (data['bookings'] != null) {
+          // If response has bookings key
+          _parseBookingHistory(data['bookings']);
+        } else {
+          // Try to parse the whole response as bookings
+          _parseBookingHistory([data]);
+        }
+      } else {
+        setState(() {
+          _bookingHistoryError =
+              'Failed to load booking history: ${response?.statusCode ?? 'No response'}';
+          _bookingHistoryLoading = false;
+        });
+        print(
+          '[ERROR] ProfilePage: Failed to load booking history - Status: ${response?.statusCode}',
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _bookingHistoryError = 'Error loading booking history: $e';
+        _bookingHistoryLoading = false;
+      });
+      print('[ERROR] ProfilePage: Exception loading booking history: $e');
+    }
+  }
+
+  // Parse booking history data and convert to Booking objects
+  void _parseBookingHistory(dynamic bookingsData) {
+    try {
+      final List<Booking> parsedBookings = [];
+
+      if (bookingsData is List) {
+        for (final bookingData in bookingsData) {
+          try {
+            // Create a Booking object from the API data
+            // Note: You may need to adjust these fields based on your actual API response
+            final booking = Booking(
+              id: bookingData['id']?.toString() ?? '',
+              carWash: CarWash(
+                id: bookingData['carwash_id']?.toString() ?? '',
+                name: bookingData['carwash_name'] ?? 'Unknown Car Wash',
+                imageUrl: bookingData['carwash_image'] ?? '',
+                services: [],
+                location: bookingData['carwash_location'] ?? '',
+                openHours: '',
+                latitude: 0.0,
+                longitude: 0.0,
+                address: bookingData['carwash_address'] ?? '',
+                contactNumber: '',
+                email: '',
+                locationServices: [],
+                totalServices: 0,
+                popularServices: [],
+                averageRating: 0.0,
+                totalBookings: 0,
+                completionRate: 0.0,
+                isOpen: false,
+                features: [],
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ),
+              service: Service(
+                id: bookingData['service_id']?.toString() ?? '',
+                name: bookingData['service_name'] ?? 'Unknown Service',
+                description: bookingData['service_description'] ?? '',
+                price:
+                    double.tryParse(
+                      bookingData['service_price']?.toString() ?? '0',
+                    ) ??
+                    0.0,
+              ),
+              dateTime:
+                  DateTime.tryParse(bookingData['booking_date'] ?? '') ??
+                  DateTime.now(),
+              paymentMethod: bookingData['payment_method'] ?? 'Unknown',
+              quantity:
+                  int.tryParse(bookingData['quantity']?.toString() ?? '1') ?? 1,
+            );
+            parsedBookings.add(booking);
+          } catch (e) {
+            print('[ERROR] ProfilePage: Error parsing individual booking: $e');
+          }
+        }
+      }
+
+      setState(() {
+        _bookingHistory = parsedBookings;
+        _bookingHistoryLoading = false;
+        _bookingHistoryError = null;
+      });
+
+      print(
+        '[SUCCESS] ProfilePage: Loaded ${parsedBookings.length} bookings from API',
+      );
+    } catch (e) {
+      setState(() {
+        _bookingHistoryError = 'Error parsing booking history: $e';
+        _bookingHistoryLoading = false;
+      });
+      print('[ERROR] ProfilePage: Exception parsing booking history: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     print(
       '[DEBUG] ProfilePage: Building UI - Loading: $_loading, Editing: $_isEditing',
     );
 
-    final bookings = context.watch<CartProvider>().bookings;
-    print('[DEBUG] ProfilePage: Found ${bookings.length} bookings');
+    // Use API-loaded booking history instead of provider bookings
+    print(
+      '[DEBUG] ProfilePage: Found ${_bookingHistory.length} bookings from API',
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -330,7 +462,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 20),
                     const Divider(),
                     const SizedBox(height: 10),
-                    _buildBookingHistorySection(bookings),
+                    _buildBookingHistorySection(_bookingHistory),
                   ],
                 ),
               ),
@@ -574,9 +706,19 @@ class _ProfilePageState extends State<ProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Booking History',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Booking History',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _loadBookingHistory,
+              tooltip: 'Refresh booking history',
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         _buildBookingHistory(bookings),
@@ -585,15 +727,89 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildBookingHistory(List<Booking> bookings) {
-    if (bookings.isEmpty) {
+    // Show loading state
+    if (_bookingHistoryLoading) {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(20.0),
-          child: Center(child: Text('No bookings yet.')),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 8),
+                Text('Loading booking history...'),
+              ],
+            ),
+          ),
         ),
       );
     }
 
+    // Show error state
+    if (_bookingHistoryError != null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline, color: Colors.red, size: 48),
+                const SizedBox(height: 8),
+                Text(
+                  'Error loading booking history',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _bookingHistoryError!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: _loadBookingHistory,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Show empty state
+    if (bookings.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.history, color: Colors.grey, size: 48),
+                const SizedBox(height: 8),
+                const Text(
+                  'No bookings yet',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Your booking history will appear here',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Show booking list
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -603,13 +819,66 @@ class _ProfilePageState extends State<ProfilePage> {
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 4),
           child: ListTile(
-            leading: Icon(Icons.local_car_wash, color: Colors.blue.shade600),
-            title: Text('${booking.carWash.name} - ${booking.service.name}'),
-            subtitle: Text(
-              'Date: ${DateFormat.yMMMd().add_jm().format(booking.dateTime)}\n'
-              'Payment: ${booking.paymentMethod}\n'
-              'Quantity: ${booking.quantity}\n'
-              'Status: Confirmed',
+            leading: CircleAvatar(
+              backgroundColor: Colors.blue.shade100,
+              child: Icon(Icons.local_car_wash, color: Colors.blue.shade600),
+            ),
+            title: Text(
+              '${booking.carWash.name} - ${booking.service.name}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.schedule, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      DateFormat.yMMMd().add_jm().format(booking.dateTime),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(Icons.payment, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      booking.paymentMethod,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(Icons.numbers, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Quantity: ${booking.quantity}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(Icons.attach_money, size: 14, color: Colors.green),
+                    const SizedBox(width: 4),
+                    Text(
+                      '\$${booking.service.price.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
             trailing: IconButton(
               icon: const Icon(Icons.more_vert),
@@ -999,8 +1268,28 @@ class _ProfilePageState extends State<ProfilePage> {
         context: context,
         builder:
             (context) => AlertDialog(
-              title: const Text('Logout'),
-              content: const Text('Are you sure you want to logout?'),
+              title: const Row(
+                children: [
+                  Icon(Icons.logout, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Logout'),
+                ],
+              ),
+              content: const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Are you sure you want to logout?'),
+                  SizedBox(height: 8),
+                  Text(
+                    'This will:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text('• Clear your login session'),
+                  Text('• Log you out from the server'),
+                  Text('• Remove stored credentials'),
+                ],
+              ),
               actions: [
                 TextButton(
                   onPressed: () {
@@ -1023,12 +1312,90 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (confirmed == true) {
         print('[DEBUG] ProfilePage: Performing logout operation');
-        await ApiConnect.logout();
-        print('[DEBUG] ProfilePage: Logout completed, navigating to login');
+
+        // Show loading indicator
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text('Logging out...'),
+                ],
+              ),
+              backgroundColor: Colors.blue,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+
+        // Call the enhanced logout method
+        final logoutSuccess = await ApiConnect.logout();
+        print(
+          '[DEBUG] ProfilePage: Logout completed with success: $logoutSuccess',
+        );
 
         if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-          print('[DEBUG] ProfilePage: Navigation to login completed');
+          // Clear the loading snackbar
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+          if (logoutSuccess) {
+            // Show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('Logged out successfully!'),
+                  ],
+                ),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+
+            // Navigate to login screen
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/', (route) => false);
+            print('[DEBUG] ProfilePage: Navigation to login completed');
+          } else {
+            // Show error message but still navigate (local storage was cleared)
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.warning, color: Colors.white),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Logout completed with some issues. You have been logged out locally.',
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 4),
+              ),
+            );
+
+            // Still navigate to login screen since local logout succeeded
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/', (route) => false);
+            print(
+              '[DEBUG] ProfilePage: Navigation to login completed (with warnings)',
+            );
+          }
         } else {
           print(
             '[WARNING] ProfilePage: Widget not mounted, skipping navigation',
@@ -1042,10 +1409,23 @@ class _ProfilePageState extends State<ProfilePage> {
       print('[ERROR] ProfilePage: Stack trace: $stackTrace');
 
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error during logout. Please try again.'),
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Error during logout: $e')),
+              ],
+            ),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'RETRY',
+              textColor: Colors.white,
+              onPressed: () => _logout(),
+            ),
           ),
         );
       }

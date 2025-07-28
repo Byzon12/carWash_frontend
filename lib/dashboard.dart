@@ -20,6 +20,7 @@ class _DashboardPageState extends State<DashboardPage> {
   final Location location = Location();
   LocationData? _userLocation;
   bool _locationLoading = true;
+  bool _mapLoading = true;
   Future<List<CarWash>>? _carWashesFuture;
   GoogleMapController? _mapController;
 
@@ -479,37 +480,90 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: GoogleMap(
-                    onMapCreated: (GoogleMapController controller) {
-                      _mapController = controller;
-                      // If we already have user location, center on it
-                      if (_userLocation != null) {
-                        Future.delayed(const Duration(milliseconds: 500), () {
-                          _centerMapOnUser();
-                        });
-                      }
-                    },
-                    initialCameraPosition: CameraPosition(
-                      target:
-                          _userLocation != null
-                              ? LatLng(
-                                _userLocation!.latitude!,
-                                _userLocation!.longitude!,
-                              )
-                              : _kenyaCenter,
-                      zoom: _userLocation != null ? 12.0 : 6.0,
-                    ),
-                    markers: _createCarWashMarkers(nearestCarWashes),
-                    mapType: MapType.normal,
-                    zoomGesturesEnabled: true,
-                    scrollGesturesEnabled: true,
-                    tiltGesturesEnabled: false,
-                    rotateGesturesEnabled: false,
-                    myLocationEnabled: _userLocation != null,
-                    myLocationButtonEnabled:
-                        false, // We'll use our custom button
-                    compassEnabled: true,
-                    mapToolbarEnabled: false,
+                  child: Stack(
+                    children: [
+                      // Google Maps Widget
+                      GoogleMap(
+                        onMapCreated: (GoogleMapController controller) {
+                          _mapController = controller;
+                          print('[DEBUG] Google Maps initialized successfully');
+                          setState(() {
+                            _mapLoading = false;
+                          });
+                          // If we already have user location, center on it
+                          if (_userLocation != null) {
+                            Future.delayed(
+                              const Duration(milliseconds: 500),
+                              () {
+                                _centerMapOnUser();
+                              },
+                            );
+                          }
+                        },
+                        initialCameraPosition: CameraPosition(
+                          target:
+                              _userLocation != null
+                                  ? LatLng(
+                                    _userLocation!.latitude!,
+                                    _userLocation!.longitude!,
+                                  )
+                                  : _kenyaCenter,
+                          zoom: _userLocation != null ? 12.0 : 6.0,
+                        ),
+                        markers: _createCarWashMarkers(nearestCarWashes),
+                        mapType: MapType.normal,
+                        zoomGesturesEnabled: true,
+                        scrollGesturesEnabled: true,
+                        tiltGesturesEnabled: false,
+                        rotateGesturesEnabled: false,
+                        myLocationEnabled: _userLocation != null,
+                        myLocationButtonEnabled:
+                            false, // We'll use our custom button
+                        compassEnabled: true,
+                        mapToolbarEnabled: false,
+                      ),
+
+                      // Overlay to show map status
+                      if (_mapLoading)
+                        Container(
+                          width: double.infinity,
+                          height: double.infinity,
+                          color: Colors.blue.shade50,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.map,
+                                size: 48,
+                                color: Colors.blue.shade300,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Loading Map...',
+                                style: TextStyle(
+                                  color: Colors.blue.shade600,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Kenya Car Wash Locations',
+                                style: TextStyle(
+                                  color: Colors.blue.shade400,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.blue.shade400,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -702,8 +756,8 @@ class _DashboardPageState extends State<DashboardPage> {
                   ? FloatingActionButton(
                     onPressed: _centerMapOnUser,
                     backgroundColor: Colors.blue,
-                    child: const Icon(Icons.my_location, color: Colors.white),
                     tooltip: 'Center map on your location',
+                    child: const Icon(Icons.my_location, color: Colors.white),
                   )
                   : !_locationLoading
                   ? FloatingActionButton.extended(

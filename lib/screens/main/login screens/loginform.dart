@@ -49,13 +49,61 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   // Helper method to test route navigation
-  void _testNavigation() {
+  void _testNavigation() async {
     print('[DEBUG] LoginForm: Testing navigation to /home...');
+
+    // Show testing message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Testing navigation to home...'),
+            ],
+          ),
+          backgroundColor: Colors.blue,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+
+    await Future.delayed(const Duration(milliseconds: 1000));
+
     try {
       Navigator.of(context).pushReplacementNamed('/home');
       print('[DEBUG] LoginForm: Navigation test successful!');
     } catch (e) {
       print('[DEBUG] LoginForm: Navigation test failed: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Navigation test failed: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'RETRY',
+              textColor: Colors.white,
+              onPressed: () => _testNavigation(),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -329,17 +377,10 @@ class _LoginFormState extends State<LoginForm> {
 
           // User data is already stored by ApiConnect.login() method
           print(
-            '📱 User data stored by API method, proceeding with location setup...',
+            '📱 User data stored by API method, proceeding with navigation...',
           );
 
-          // Request location permission after successful login
-          print('📍 Requesting location permission after successful login...');
-          await LocationHelper.requestLocationPermission(context);
-
-          // Wait longer to show success message
-          await Future.delayed(const Duration(milliseconds: 2000));
-
-          // Then navigate to home screen
+          // First navigate to home screen immediately
           if (mounted) {
             print('🏠 Navigating to home screen...');
             print('🔍 Current route: ${ModalRoute.of(context)?.settings.name}');
@@ -368,11 +409,25 @@ class _LoginFormState extends State<LoginForm> {
                 ),
               );
 
-              // Wait a bit for snackbar to show
-              await Future.delayed(const Duration(milliseconds: 1000));
+              // Wait a brief moment for snackbar to show
+              await Future.delayed(const Duration(milliseconds: 500));
 
+              // Navigate to home first
               Navigator.of(context).pushReplacementNamed('/home');
               print('🎯 Navigation to home completed successfully!');
+
+              // Request location permission AFTER navigation (non-blocking)
+              print('📍 Scheduling location permission request...');
+              Future.delayed(const Duration(milliseconds: 1500), () async {
+                if (mounted) {
+                  try {
+                    await LocationHelper.requestLocationPermission(context);
+                    print('📍 Location permission request completed');
+                  } catch (e) {
+                    print('📍 Location permission request failed: $e');
+                  }
+                }
+              });
             } catch (e, stackTrace) {
               print('❌ Navigation error: $e');
               print('❌ Stack trace: $stackTrace');

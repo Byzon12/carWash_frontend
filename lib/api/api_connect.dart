@@ -8,7 +8,7 @@ class ApiConnect {
   static String get baseUrl {
     if (kIsWeb) {
       // For web development, use localhost
-      return 'http://localhost:8000/';
+      return 'http://192.168.137.10:8000/';
     } else {
       // For mobile development - check if debugging wirelessly
       if (kDebugMode) {
@@ -16,7 +16,7 @@ class ApiConnect {
         return 'http://$_wirelessDebugIP:8000/';
       } else {
         // For production or emulator
-        return 'http://127.0.0.1:8000/';
+        return 'http://192.168.137.10:8000/';
       }
     }
   }
@@ -24,7 +24,7 @@ class ApiConnect {
   // Configuration for wireless debugging
   // TODO: Update this IP address to match your computer's IP address
   static const String _wirelessDebugIP =
-      '192.168.0.104'; // Your actual WiFi IP!
+      '192.168.137.10'; // Your actual WiFi IP!
 
   // Helper method to get your computer's IP for wireless debugging
   static void printNetworkInstructions() {
@@ -230,9 +230,63 @@ class ApiConnect {
     }
   }
 
-  // Logout method
-  static Future<void> logout() async {
-    await storage.deleteAll();
+  // Logout method - calls backend logout API then clears local storage
+  static Future<bool> logout() async {
+    try {
+      print('[DEBUG] ApiConnect: Starting logout process...');
+
+      // Get the current access token
+      final token = await getAccessToken();
+
+      if (token != null && token.isNotEmpty) {
+        print('[DEBUG] ApiConnect: Calling backend logout API...');
+
+        // Call backend logout endpoint
+        final url = Uri.parse('${userBaseUrl}logout/');
+        print('[DEBUG] ApiConnect: Logout URL: $url');
+
+        final response = await http.post(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+
+        print(
+          '[DEBUG] ApiConnect: Logout response status: ${response.statusCode}',
+        );
+        print('[DEBUG] ApiConnect: Logout response body: ${response.body}');
+
+        if (response.statusCode == 200 || response.statusCode == 204) {
+          print('[SUCCESS] ApiConnect: Backend logout successful');
+        } else {
+          print(
+            '[WARNING] ApiConnect: Backend logout failed with status: ${response.statusCode}',
+          );
+          // Continue with local logout even if backend fails
+        }
+      } else {
+        print(
+          '[DEBUG] ApiConnect: No access token found, skipping backend logout',
+        );
+      }
+    } catch (e) {
+      print('[ERROR] ApiConnect: Backend logout error: $e');
+      // Continue with local logout even if backend call fails
+    }
+
+    try {
+      // Always clear local storage regardless of backend response
+      print('[DEBUG] ApiConnect: Clearing local storage...');
+      await storage.deleteAll();
+      print('[SUCCESS] ApiConnect: Local storage cleared successfully');
+
+      return true; // Return true if local storage is cleared successfully
+    } catch (e) {
+      print('[ERROR] ApiConnect: Failed to clear local storage: $e');
+      return false;
+    }
   }
 
   // Get stored access token
@@ -629,9 +683,9 @@ class ApiConnect {
     try {
       // Test multiple endpoints to see which one responds
       final testUrls = [
-        '${baseUrl}', // Base URL
+        baseUrl, // Base URL
         '${baseUrl}ping/', // Ping endpoint
-        '${userBaseUrl}', // User endpoint
+        userBaseUrl, // User endpoint
         '${userBaseUrl}login/', // Login endpoint
       ];
 
@@ -672,6 +726,91 @@ class ApiConnect {
       print('  ✓ Windows Firewall? Try temporarily disabling');
       print('  ✓ Port 8000 open? Try: telnet $_wirelessDebugIP 8000');
       return false;
+    }
+  }
+
+  // Test logout API directly - for debugging purposes
+  static Future<void> testLogoutAPI() async {
+    print('[DEBUG] ApiConnect: Testing logout API directly...');
+
+    try {
+      final token = await getAccessToken();
+      print(
+        '[DEBUG] ApiConnect: Current token: ${token?.substring(0, 20) ?? 'null'}...',
+      );
+
+      if (token == null || token.isEmpty) {
+        print('[WARNING] ApiConnect: No token found for logout test');
+        return;
+      }
+
+      final url = Uri.parse('${userBaseUrl}logout/');
+      print('[DEBUG] ApiConnect: Testing logout URL: $url');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('[DEBUG] ApiConnect: Logout test response:');
+      print('  Status: ${response.statusCode}');
+      print('  Headers: ${response.headers}');
+      print('  Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('[SUCCESS] ApiConnect: Logout API test successful!');
+      } else {
+        print(
+          '[ERROR] ApiConnect: Logout API test failed with status: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print('[ERROR] ApiConnect: Logout API test exception: $e');
+    }
+  }
+
+  // Get user booking history
+  static Future<http.Response?> getUserBookingHistory() async {
+    try {
+      print('[DEBUG] ApiConnect: Fetching user booking history...');
+      final token = await getAccessToken();
+      if (token == null) {
+        print('[ERROR] ApiConnect: No access token found for booking history');
+        return null;
+      }
+
+      final url = Uri.parse('${userBaseUrl}bookings/');
+      print('[DEBUG] ApiConnect: Booking history URL: $url');
+
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+
+      print(
+        '[DEBUG] ApiConnect: Booking history response status: ${response.statusCode}',
+      );
+      if (response.statusCode == 200) {
+        print('[SUCCESS] ApiConnect: Booking history fetched successfully');
+      } else {
+        print(
+          '[ERROR] ApiConnect: Booking history fetch failed: ${response.statusCode}',
+        );
+        print('[ERROR] ApiConnect: Response body: ${response.body}');
+      }
+
+      return response;
+    } catch (e) {
+      print('[ERROR] ApiConnect: Exception fetching booking history: $e');
+      return null;
     }
   }
 }

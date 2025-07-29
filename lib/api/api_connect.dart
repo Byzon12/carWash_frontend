@@ -8,7 +8,23 @@ class ApiConnect {
   static String get baseUrl {
     if (kIsWeb) {
       // For web development, use localhost
-      return 'http://192.168.137.10:8000/';
+      return 'http://192.168.137.243:8000/';
+    } else {
+      // For mobile development - check if debugging wirelessly
+      if (kDebugMode) {
+        // For wireless debugging, use your computer's IP address
+        return 'http://$_wirelessDebugIP:8000/';
+      } else {
+        // For production or emulator
+        return 'http://192.168.137.10:8000/';
+      }
+    }
+  }
+
+  static String get bookingBaseUrl {
+    if (kIsWeb) {
+      // For web development, use localhost
+      return 'http://192.168.137.243:8000/';
     } else {
       // For mobile development - check if debugging wirelessly
       if (kDebugMode) {
@@ -24,7 +40,7 @@ class ApiConnect {
   // Configuration for wireless debugging
   // TODO: Update this IP address to match your computer's IP address
   static const String _wirelessDebugIP =
-      '192.168.137.10'; // Your actual WiFi IP!
+      '192.168.137.243'; // Your actual WiFi IP!
 
   // Helper method to get your computer's IP for wireless debugging
   static void printNetworkInstructions() {
@@ -462,7 +478,7 @@ class ApiConnect {
 
       final url = Uri.parse('${userBaseUrl}password-reset-change/');
       final response = await http
-          .post(
+          .put(
             url,
             headers: {
               'Content-Type': 'application/json',
@@ -782,7 +798,7 @@ class ApiConnect {
         return null;
       }
 
-      final url = Uri.parse('${userBaseUrl}bookings/');
+      final url = Uri.parse('$bookingBaseUrl/booking/history/');
       print('[DEBUG] ApiConnect: Booking history URL: $url');
 
       final response = await http

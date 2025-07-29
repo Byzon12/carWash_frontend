@@ -202,7 +202,7 @@ class PaymentResponse {
 }
 
 class BookingService {
-  static const String baseUrl = 'http://192.168.137.10:8000/';
+  static const String baseUrl = 'http://192.168.137.243:8000/';
   static const String bookingEndpoint = '/booking';
 
   // Create a new booking

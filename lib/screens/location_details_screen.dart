@@ -1,30 +1,187 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/cars.dart';
+import '../services/favorites_service.dart';
 import 'service_details_screen.dart';
 
-class LocationDetailsScreen extends StatelessWidget {
+class LocationDetailsScreen extends StatefulWidget {
   final CarWash carWash;
 
   const LocationDetailsScreen({super.key, required this.carWash});
 
   @override
+  State<LocationDetailsScreen> createState() => _LocationDetailsScreenState();
+}
+
+class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
+  bool _isFavorite = false;
+  bool _isLoadingFavorite = true;
+  bool _isTogglingFavorite = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFavoriteStatus();
+  }
+
+  Future<void> _checkFavoriteStatus() async {
+    try {
+      setState(() => _isLoadingFavorite = true);
+      final isFavorite = await FavoritesService.isLocationFavorite(
+        widget.carWash.id.toString(),
+      );
+      if (mounted) {
+        setState(() {
+          _isFavorite = isFavorite;
+          _isLoadingFavorite = false;
+        });
+      }
+    } catch (e) {
+      print(
+        '[ERROR] LocationDetailsScreen: Error checking favorite status: $e',
+      );
+      if (mounted) {
+        setState(() => _isLoadingFavorite = false);
+      }
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_isTogglingFavorite) return;
+
+    try {
+      setState(() => _isTogglingFavorite = true);
+
+      // Debug the location ID we're sending
+      final locationId = widget.carWash.id.toString();
+      print(
+        '[DEBUG] LocationDetailsScreen: Attempting to toggle favorite for location ID: $locationId',
+      );
+      print(
+        '[DEBUG] LocationDetailsScreen: CarWash name: ${widget.carWash.name}',
+      );
+
+      final success = await FavoritesService.toggleFavorite(locationId);
+
+      if (mounted) {
+        if (success) {
+          setState(() {
+            _isFavorite = !_isFavorite;
+          });
+
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _isFavorite ? 'Added to favorites!' : 'Removed from favorites!',
+              ),
+              backgroundColor: _isFavorite ? Colors.green : Colors.orange,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } else {
+          // Show specific error message based on the problem
+          String errorMessage = 'Failed to update favorites. Please try again.';
+
+          // Check if it's a location ID mismatch issue
+          if (locationId.isEmpty) {
+            errorMessage =
+                'Invalid location data. Please refresh and try again.';
+          } else {
+            errorMessage =
+                'This location is not available for favorites. Please contact support.';
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+              action: SnackBarAction(
+                label: 'Details',
+                textColor: Colors.white,
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder:
+                        (context) => AlertDialog(
+                          title: const Text('Favorites Error'),
+                          content: Text(
+                            'Location ID: $locationId\n'
+                            'Location Name: ${widget.carWash.name}\n\n'
+                            'This location may not be configured for favorites in the system. '
+                            'Please contact support if this issue persists.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                  );
+                },
+              ),
+            ),
+          );
+        }
+        setState(() => _isTogglingFavorite = false);
+      }
+    } catch (e) {
+      print('[ERROR] LocationDetailsScreen: Error toggling favorite: $e');
+      if (mounted) {
+        setState(() => _isTogglingFavorite = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred. Please try again.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(carWash.name),
+        title: Text(widget.carWash.name),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.star_border),
-            onPressed: () {
-              // TODO: Implement favorite functionality
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Added to favorites!')),
-              );
-            },
-          ),
+          _isLoadingFavorite
+              ? const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                ),
+              )
+              : IconButton(
+                icon:
+                    _isTogglingFavorite
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                        : Icon(
+                          _isFavorite ? Icons.star : Icons.star_border,
+                          color: _isFavorite ? Colors.yellow : Colors.white,
+                        ),
+                onPressed: _isTogglingFavorite ? null : _toggleFavorite,
+                tooltip:
+                    _isFavorite ? 'Remove from favorites' : 'Add to favorites',
+              ),
         ],
       ),
       body: SingleChildScrollView(
@@ -37,7 +194,7 @@ class LocationDetailsScreen extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 image: DecorationImage(
-                  image: NetworkImage(carWash.imageUrl),
+                  image: NetworkImage(widget.carWash.imageUrl),
                   fit: BoxFit.cover,
                 ),
                 boxShadow: [
@@ -64,7 +221,7 @@ class LocationDetailsScreen extends StatelessWidget {
                       right: 16,
                       child: Column(
                         children: [
-                          if (carWash.isOpen)
+                          if (widget.carWash.isOpen)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -83,7 +240,7 @@ class LocationDetailsScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          if (carWash.averageRating > 0) ...[
+                          if (widget.carWash.averageRating > 0) ...[
                             const SizedBox(height: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -104,7 +261,8 @@ class LocationDetailsScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    carWash.averageRating.toStringAsFixed(1),
+                                    widget.carWash.averageRating
+                                        .toStringAsFixed(1),
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -127,7 +285,7 @@ class LocationDetailsScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            carWash.name,
+                            widget.carWash.name,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 28,
@@ -145,9 +303,9 @@ class LocationDetailsScreen extends StatelessWidget {
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
-                                  carWash.address.isNotEmpty
-                                      ? carWash.address
-                                      : carWash.location,
+                                  widget.carWash.address.isNotEmpty
+                                      ? widget.carWash.address
+                                      : widget.carWash.location,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -156,7 +314,7 @@ class LocationDetailsScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                          if (carWash.distance != null) ...[
+                          if (widget.carWash.distance != null) ...[
                             const SizedBox(height: 4),
                             Row(
                               children: [
@@ -167,7 +325,7 @@ class LocationDetailsScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '${carWash.distance!.toStringAsFixed(2)} km away',
+                                  '${widget.carWash.distance!.toStringAsFixed(2)} km away',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 14,
@@ -192,7 +350,7 @@ class LocationDetailsScreen extends StatelessWidget {
                   Expanded(
                     child: _buildStatCard(
                       'Services',
-                      '${carWash.totalServices}',
+                      '${widget.carWash.totalServices}',
                       Icons.local_car_wash,
                       Colors.blue,
                     ),
@@ -201,7 +359,7 @@ class LocationDetailsScreen extends StatelessWidget {
                   Expanded(
                     child: _buildStatCard(
                       'Bookings',
-                      '${carWash.totalBookings}',
+                      '${widget.carWash.totalBookings}',
                       Icons.calendar_today,
                       Colors.green,
                     ),
@@ -210,8 +368,8 @@ class LocationDetailsScreen extends StatelessWidget {
                   Expanded(
                     child: _buildStatCard(
                       'Rating',
-                      carWash.averageRating > 0
-                          ? carWash.averageRating.toStringAsFixed(1)
+                      widget.carWash.averageRating > 0
+                          ? widget.carWash.averageRating.toStringAsFixed(1)
                           : 'New',
                       Icons.star,
                       Colors.orange,
@@ -222,39 +380,41 @@ class LocationDetailsScreen extends StatelessWidget {
             ),
 
             // Business Information Section
-            if (carWash.businessInfo != null) ...[
+            if (widget.carWash.businessInfo != null) ...[
               _buildSectionHeader('Business Information', Icons.business),
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
                   children: [
-                    if (carWash.businessInfo!.contactNumber.isNotEmpty)
+                    if (widget.carWash.businessInfo!.contactNumber.isNotEmpty)
                       _buildInfoTile(
                         'Phone',
-                        carWash.businessInfo!.contactNumber,
+                        widget.carWash.businessInfo!.contactNumber,
                         Icons.phone,
                         onTap:
                             () => _makePhoneCall(
-                              carWash.businessInfo!.contactNumber,
+                              widget.carWash.businessInfo!.contactNumber,
                             ),
                       ),
-                    if (carWash.businessInfo!.email.isNotEmpty)
+                    if (widget.carWash.businessInfo!.email.isNotEmpty)
                       _buildInfoTile(
                         'Email',
-                        carWash.businessInfo!.email,
+                        widget.carWash.businessInfo!.email,
                         Icons.email,
-                        onTap: () => _sendEmail(carWash.businessInfo!.email),
+                        onTap:
+                            () =>
+                                _sendEmail(widget.carWash.businessInfo!.email),
                       ),
-                    if (carWash.businessInfo!.parking.isNotEmpty)
+                    if (widget.carWash.businessInfo!.parking.isNotEmpty)
                       _buildInfoTile(
                         'Parking',
-                        carWash.businessInfo!.parking,
+                        widget.carWash.businessInfo!.parking,
                         Icons.local_parking,
                       ),
-                    if (carWash.businessInfo!.accessibility.isNotEmpty)
+                    if (widget.carWash.businessInfo!.accessibility.isNotEmpty)
                       _buildInfoTile(
                         'Accessibility',
-                        carWash.businessInfo!.accessibility,
+                        widget.carWash.businessInfo!.accessibility,
                         Icons.accessible,
                       ),
                   ],
@@ -263,7 +423,8 @@ class LocationDetailsScreen extends StatelessWidget {
             ],
 
             // Operating Hours Section
-            if (carWash.businessInfo?.operatingHours.isNotEmpty == true) ...[
+            if (widget.carWash.businessInfo?.operatingHours.isNotEmpty ==
+                true) ...[
               _buildSectionHeader('Operating Hours', Icons.access_time),
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -272,71 +433,77 @@ class LocationDetailsScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children:
-                          carWash.businessInfo!.operatingHours.entries.map((
-                            entry,
-                          ) {
-                            final isToday = _isToday(entry.key);
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                children: [
-                                  SizedBox(
-                                    width: 80,
-                                    child: Text(
-                                      _capitalizeDayName(entry.key),
-                                      style: TextStyle(
-                                        fontWeight:
-                                            isToday
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                        color:
-                                            isToday
-                                                ? Colors.blue
-                                                : Colors.black87,
-                                      ),
-                                    ),
+                          widget.carWash.businessInfo!.operatingHours.entries
+                              .map((entry) {
+                                final isToday = _isToday(entry.key);
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4,
                                   ),
-                                  Expanded(
-                                    child: Text(
-                                      entry.value,
-                                      style: TextStyle(
-                                        fontWeight:
-                                            isToday
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                        color:
-                                            isToday
-                                                ? Colors.blue
-                                                : Colors.black87,
-                                      ),
-                                    ),
-                                  ),
-                                  if (isToday)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color:
-                                            carWash.isOpen
-                                                ? Colors.green
-                                                : Colors.red,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        carWash.isOpen ? 'Open' : 'Closed',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
+                                  child: Row(
+                                    children: [
+                                      SizedBox(
+                                        width: 80,
+                                        child: Text(
+                                          _capitalizeDayName(entry.key),
+                                          style: TextStyle(
+                                            fontWeight:
+                                                isToday
+                                                    ? FontWeight.bold
+                                                    : FontWeight.normal,
+                                            color:
+                                                isToday
+                                                    ? Colors.blue
+                                                    : Colors.black87,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
+                                      Expanded(
+                                        child: Text(
+                                          entry.value,
+                                          style: TextStyle(
+                                            fontWeight:
+                                                isToday
+                                                    ? FontWeight.bold
+                                                    : FontWeight.normal,
+                                            color:
+                                                isToday
+                                                    ? Colors.blue
+                                                    : Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                      if (isToday)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                widget.carWash.isOpen
+                                                    ? Colors.green
+                                                    : Colors.red,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            widget.carWash.isOpen
+                                                ? 'Open'
+                                                : 'Closed',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                );
+                              })
+                              .toList(),
                     ),
                   ),
                 ),
@@ -344,7 +511,8 @@ class LocationDetailsScreen extends StatelessWidget {
             ],
 
             // Payment Methods Section
-            if (carWash.businessInfo?.paymentMethods.isNotEmpty == true) ...[
+            if (widget.carWash.businessInfo?.paymentMethods.isNotEmpty ==
+                true) ...[
               _buildSectionHeader('Payment Methods', Icons.payment),
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -355,7 +523,9 @@ class LocationDetailsScreen extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children:
-                          carWash.businessInfo!.paymentMethods.map((method) {
+                          widget.carWash.businessInfo!.paymentMethods.map((
+                            method,
+                          ) {
                             return Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -393,7 +563,7 @@ class LocationDetailsScreen extends StatelessWidget {
             ],
 
             // Features Section
-            if (carWash.features.isNotEmpty) ...[
+            if (widget.carWash.features.isNotEmpty) ...[
               _buildSectionHeader('Amenities & Features', Icons.star_outline),
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -404,7 +574,7 @@ class LocationDetailsScreen extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children:
-                          carWash.features.map((feature) {
+                          widget.carWash.features.map((feature) {
                             return Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -444,7 +614,7 @@ class LocationDetailsScreen extends StatelessWidget {
             ],
 
             // Price Range Section
-            if (carWash.priceRange != null) ...[
+            if (widget.carWash.priceRange != null) ...[
               _buildSectionHeader('Price Range', Icons.monetization_on),
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -456,7 +626,7 @@ class LocationDetailsScreen extends StatelessWidget {
                     ),
                     title: const Text('Service Prices'),
                     subtitle: Text(
-                      '${carWash.priceRange!.currency} ${carWash.priceRange!.min.toStringAsFixed(0)} - ${carWash.priceRange!.max.toStringAsFixed(0)}',
+                      '${widget.carWash.priceRange!.currency} ${widget.carWash.priceRange!.min.toStringAsFixed(0)} - ${widget.carWash.priceRange!.max.toStringAsFixed(0)}',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -470,11 +640,11 @@ class LocationDetailsScreen extends StatelessWidget {
 
             // Available Services Section
             _buildSectionHeader(
-              'Available Services (${carWash.locationServices.length})',
+              'Available Services (${widget.carWash.locationServices.length})',
               Icons.local_car_wash,
             ),
 
-            if (carWash.locationServices.isEmpty)
+            if (widget.carWash.locationServices.isEmpty)
               Container(
                 padding: const EdgeInsets.all(32),
                 child: const Center(
@@ -495,7 +665,7 @@ class LocationDetailsScreen extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children:
-                      carWash.locationServices.map((locationService) {
+                      widget.carWash.locationServices.map((locationService) {
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),
                           elevation: 2,
@@ -514,7 +684,7 @@ class LocationDetailsScreen extends StatelessWidget {
                                   builder:
                                       (context) => ServiceDetailsScreen(
                                         service: service,
-                                        carWash: carWash,
+                                        carWash: widget.carWash,
                                       ),
                                 ),
                               );
@@ -828,11 +998,13 @@ class LocationDetailsScreen extends StatelessWidget {
         ),
         child: Row(
           children: [
-            if (carWash.businessInfo?.contactNumber.isNotEmpty == true)
+            if (widget.carWash.businessInfo?.contactNumber.isNotEmpty == true)
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed:
-                      () => _makePhoneCall(carWash.businessInfo!.contactNumber),
+                      () => _makePhoneCall(
+                        widget.carWash.businessInfo!.contactNumber,
+                      ),
                   icon: const Icon(Icons.phone),
                   label: const Text('Call'),
                   style: ElevatedButton.styleFrom(
@@ -842,7 +1014,7 @@ class LocationDetailsScreen extends StatelessWidget {
                   ),
                 ),
               ),
-            if (carWash.businessInfo?.contactNumber.isNotEmpty == true)
+            if (widget.carWash.businessInfo?.contactNumber.isNotEmpty == true)
               const SizedBox(width: 12),
             Expanded(
               child: ElevatedButton.icon(
@@ -992,76 +1164,189 @@ class LocationDetailsScreen extends StatelessWidget {
     }
   }
 
-  void _makePhoneCall(String phoneNumber) {
-    // TODO: Implement phone call functionality
-    // You can use url_launcher package: launch('tel:$phoneNumber')
-    print('Calling: $phoneNumber');
-  }
-
-  void _sendEmail(String email) {
-    // TODO: Implement email functionality
-    // You can use url_launcher package: launch('mailto:$email')
-    print('Sending email to: $email');
-  }
-
-  void _openDirections() {
-    // TODO: Implement directions functionality
-    // You can use url_launcher or google_maps_flutter
-    print('Opening directions to: ${carWash.latitude}, ${carWash.longitude}');
-  }
-
-  bool _isOpenNow() {
-    if (carWash.businessInfo?.operatingHours.isEmpty != false) {
-      return carWash.isOpen; // Fallback to backend status
-    }
+  void _makePhoneCall(String phoneNumber) async {
+    // Clean the phone number (remove spaces, dashes, etc.)
+    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    final Uri phoneUri = Uri.parse('tel:$cleanNumber');
 
     try {
-      final now = DateTime.now();
-      final weekday = now.weekday;
-      final dayNames = [
-        'monday',
-        'tuesday',
-        'wednesday',
-        'thursday',
-        'friday',
-        'saturday',
-        'sunday',
-      ];
-      final todayName = dayNames[weekday - 1];
+      print('[DEBUG] LocationDetailsScreen: Attempting to call $cleanNumber');
 
-      final todayHours = carWash.businessInfo!.operatingHours[todayName];
-      if (todayHours == null || todayHours.isEmpty) return false;
-
-      final parts = todayHours.split(' - ');
-      if (parts.length != 2) return false;
-
-      TimeOfDay parseTime(String t) {
-        final format = RegExp(r'(\d+):(\d+) (AM|PM)');
-        final match = format.firstMatch(t);
-        if (match == null) throw Exception('Invalid time format');
-        int hour = int.parse(match.group(1)!);
-        int minute = int.parse(match.group(2)!);
-        final ampm = match.group(3);
-        if (ampm == 'PM' && hour != 12) hour += 12;
-        if (ampm == 'AM' && hour == 12) hour = 0;
-        return TimeOfDay(hour: hour, minute: minute);
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+        print('[SUCCESS] LocationDetailsScreen: Phone call initiated');
+      } else {
+        print('[ERROR] LocationDetailsScreen: Cannot launch phone call');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Unable to make phone call. Please check if you have a phone app installed.',
+              ),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
       }
+    } catch (e) {
+      print('[ERROR] LocationDetailsScreen: Error making phone call: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error making phone call: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
 
-      final currentTime = TimeOfDay.now();
-      final open = parseTime(parts[0]);
-      final close = parseTime(parts[1]);
+  void _sendEmail(String email) async {
+    final Uri emailUri = Uri.parse('mailto:$email');
 
-      bool afterOpen =
-          (currentTime.hour > open.hour) ||
-          (currentTime.hour == open.hour && currentTime.minute >= open.minute);
-      bool beforeClose =
-          (currentTime.hour < close.hour) ||
-          (currentTime.hour == close.hour &&
-              currentTime.minute <= close.minute);
+    try {
+      print(
+        '[DEBUG] LocationDetailsScreen: Attempting to send email to $email',
+      );
 
-      return afterOpen && beforeClose;
-    } catch (_) {
-      return carWash.isOpen; // Fallback to backend status
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+        print('[SUCCESS] LocationDetailsScreen: Email app opened');
+      } else {
+        print('[ERROR] LocationDetailsScreen: Cannot launch email app');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Unable to open email app. Please check if you have an email app installed.',
+              ),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('[ERROR] LocationDetailsScreen: Error opening email: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening email: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  void _openDirections() async {
+    final double lat = widget.carWash.latitude;
+    final double lng = widget.carWash.longitude;
+    final String carWashName = widget.carWash.name;
+
+    print(
+      '[DEBUG] LocationDetailsScreen: Opening directions to $carWashName at $lat, $lng',
+    );
+
+    // Try Google Maps first (most common), then Apple Maps, then fallback to web
+    final List<String> mapUrls = [
+      // Google Maps app (Android/iOS)
+      'google.navigation:q=$lat,$lng',
+      // Apple Maps (iOS)
+      'maps://maps.apple.com/?daddr=$lat,$lng&dirflg=d',
+      // Google Maps web version (universal fallback)
+      'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving',
+    ];
+
+    bool launched = false;
+
+    for (String urlString in mapUrls) {
+      try {
+        final Uri mapUri = Uri.parse(urlString);
+
+        if (await canLaunchUrl(mapUri)) {
+          await launchUrl(
+            mapUri,
+            mode:
+                urlString.startsWith('http')
+                    ? LaunchMode.externalApplication
+                    : LaunchMode.externalNonBrowserApplication,
+          );
+          launched = true;
+          print(
+            '[SUCCESS] LocationDetailsScreen: Directions opened with $urlString',
+          );
+          break;
+        }
+      } catch (e) {
+        print(
+          '[WARNING] LocationDetailsScreen: Failed to launch $urlString: $e',
+        );
+        continue;
+      }
+    }
+
+    if (!launched) {
+      print('[ERROR] LocationDetailsScreen: All direction options failed');
+      if (mounted) {
+        // Show dialog with manual coordinates as fallback
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Directions'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Unable to open maps app. Here are the coordinates:',
+                  ),
+                  const SizedBox(height: 12),
+                  SelectableText(
+                    'Location: $carWashName\nLatitude: $lat\nLongitude: $lng',
+                    style: const TextStyle(fontFamily: 'monospace'),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'You can copy these coordinates to your preferred maps app.',
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    // Try to open web version as last resort
+                    final webUrl =
+                        'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng';
+                    final Uri webUri = Uri.parse(webUrl);
+
+                    try {
+                      await launchUrl(
+                        webUri,
+                        mode: LaunchMode.externalApplication,
+                      );
+                      Navigator.of(context).pop();
+                    } catch (e) {
+                      print(
+                        '[ERROR] LocationDetailsScreen: Failed to open web maps: $e',
+                      );
+                    }
+                  },
+                  child: const Text('Open in Browser'),
+                ),
+              ],
+            );
+          },
+        );
+      }
     }
   }
 }

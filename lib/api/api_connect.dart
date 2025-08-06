@@ -8,7 +8,7 @@ class ApiConnect {
   static String get baseUrl {
     if (kIsWeb) {
       // For web development, use localhost
-      return 'http://192.168.137.243:8000/';
+      return 'http://192.168.137.137:8000/';
     } else {
       // For mobile development - check if debugging wirelessly
       if (kDebugMode) {
@@ -16,7 +16,7 @@ class ApiConnect {
         return 'http://$_wirelessDebugIP:8000/';
       } else {
         // For production or emulator
-        return 'http://192.168.137.10:8000/';
+        return 'https://69bf1260a484.ngrok-free.app/';
       }
     }
   }
@@ -24,7 +24,7 @@ class ApiConnect {
   static String get bookingBaseUrl {
     if (kIsWeb) {
       // For web development, use localhost
-      return 'http://192.168.137.243:8000/';
+      return 'http://127.0.0.1:8000/';
     } else {
       // For mobile development - check if debugging wirelessly
       if (kDebugMode) {
@@ -40,7 +40,7 @@ class ApiConnect {
   // Configuration for wireless debugging
   // TODO: Update this IP address to match your computer's IP address
   static const String _wirelessDebugIP =
-      '192.168.137.243'; // Your actual WiFi IP!
+      '192.168.0.108'; // Your actual WiFi IP!
 
   // Helper method to get your computer's IP for wireless debugging
   static void printNetworkInstructions() {
@@ -827,6 +827,296 @@ class ApiConnect {
     } catch (e) {
       print('[ERROR] ApiConnect: Exception fetching booking history: $e');
       return null;
+    }
+  }
+
+  // Favorite Locations API Methods
+
+  // Add a location to favorites
+  static Future<http.Response?> addFavoriteLocation({
+    required String locationId,
+  }) async {
+    try {
+      print('[DEBUG] ApiConnect: Adding location to favorites...');
+      final token = await getAccessToken();
+      if (token == null) {
+        print('[ERROR] ApiConnect: No access token for adding favorite');
+        return null;
+      }
+
+      final url = Uri.parse('${userBaseUrl}favorites/add/');
+      print('[DEBUG] ApiConnect: Add favorite URL: $url');
+      print(
+        '[DEBUG] ApiConnect: Adding location ID: $locationId (type: ${locationId.runtimeType})',
+      );
+
+      final requestBody = jsonEncode({'location_id': locationId});
+      print('[DEBUG] ApiConnect: Request body: $requestBody');
+
+      final response = await http
+          .post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: requestBody,
+          )
+          .timeout(const Duration(seconds: 15));
+
+      print(
+        '[DEBUG] ApiConnect: Add favorite response status: ${response.statusCode}',
+      );
+      print('[DEBUG] ApiConnect: Add favorite response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('[SUCCESS] ApiConnect: Location added to favorites successfully');
+      } else {
+        print(
+          '[ERROR] ApiConnect: Failed to add favorite - Status: ${response.statusCode}',
+        );
+        try {
+          final errorData = jsonDecode(response.body);
+          print('[ERROR] ApiConnect: Add favorite error details: $errorData');
+
+          // Check if it's a location not found error
+          if (errorData.toString().contains('DoesNotExist') ||
+              errorData.toString().contains(
+                'Location matching query does not exist',
+              )) {
+            print(
+              '[ERROR] ApiConnect: LOCATION ID MISMATCH - The location ID "$locationId" does not exist in the backend Location table',
+            );
+            print(
+              '[ERROR] ApiConnect: This suggests the car wash IDs from /locations/ endpoint don\'t match the Location model IDs',
+            );
+          }
+        } catch (e) {
+          print(
+            '[ERROR] ApiConnect: Could not parse add favorite error response: $e',
+          );
+        }
+      }
+
+      return response;
+    } catch (e, stackTrace) {
+      print('[ERROR] ApiConnect: Exception adding favorite location: $e');
+      print('[ERROR] ApiConnect: Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  // Remove a location from favorites
+  static Future<http.Response?> removeFavoriteLocation({
+    required String locationId,
+  }) async {
+    try {
+      print('[DEBUG] ApiConnect: Removing location from favorites...');
+      final token = await getAccessToken();
+      if (token == null) {
+        print('[ERROR] ApiConnect: No access token for removing favorite');
+        return null;
+      }
+
+      final url = Uri.parse('${userBaseUrl}favorites/remove/');
+      print('[DEBUG] ApiConnect: Remove favorite URL: $url');
+      print('[DEBUG] ApiConnect: Removing location ID: $locationId');
+
+      final response = await http
+          .post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({'location_id': locationId}),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      print(
+        '[DEBUG] ApiConnect: Remove favorite response status: ${response.statusCode}',
+      );
+      print(
+        '[DEBUG] ApiConnect: Remove favorite response body: ${response.body}',
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print(
+          '[SUCCESS] ApiConnect: Location removed from favorites successfully',
+        );
+      } else {
+        print(
+          '[ERROR] ApiConnect: Failed to remove favorite - Status: ${response.statusCode}',
+        );
+        try {
+          final errorData = jsonDecode(response.body);
+          print(
+            '[ERROR] ApiConnect: Remove favorite error details: $errorData',
+          );
+        } catch (e) {
+          print(
+            '[ERROR] ApiConnect: Could not parse remove favorite error response: $e',
+          );
+        }
+      }
+
+      return response;
+    } catch (e, stackTrace) {
+      print('[ERROR] ApiConnect: Exception removing favorite location: $e');
+      print('[ERROR] ApiConnect: Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  // Get list of user's favorite locations
+  static Future<http.Response?> getFavoriteLocations() async {
+    try {
+      print('[DEBUG] ApiConnect: Fetching favorite locations...');
+      final token = await getAccessToken();
+      if (token == null) {
+        print('[ERROR] ApiConnect: No access token for favorite locations');
+        return null;
+      }
+
+      final url = Uri.parse('${userBaseUrl}favorites/');
+      print('[DEBUG] ApiConnect: Get favorites URL: $url');
+
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+
+      print(
+        '[DEBUG] ApiConnect: Get favorites response status: ${response.statusCode}',
+      );
+      print(
+        '[DEBUG] ApiConnect: Get favorites response body: ${response.body}',
+      );
+
+      if (response.statusCode == 200) {
+        print('[SUCCESS] ApiConnect: Favorite locations fetched successfully');
+        try {
+          final data = jsonDecode(response.body);
+          final favoritesCount =
+              data is List
+                  ? data.length
+                  : (data is Map && data['data'] is List)
+                  ? data['data'].length
+                  : 0;
+          print('[DEBUG] ApiConnect: Found $favoritesCount favorite locations');
+        } catch (e) {
+          print('[DEBUG] ApiConnect: Could not count favorites: $e');
+        }
+      } else {
+        print(
+          '[ERROR] ApiConnect: Failed to fetch favorites - Status: ${response.statusCode}',
+        );
+        try {
+          final errorData = jsonDecode(response.body);
+          print('[ERROR] ApiConnect: Get favorites error details: $errorData');
+        } catch (e) {
+          print(
+            '[ERROR] ApiConnect: Could not parse get favorites error response: $e',
+          );
+        }
+      }
+
+      return response;
+    } catch (e, stackTrace) {
+      print('[ERROR] ApiConnect: Exception fetching favorite locations: $e');
+      print('[ERROR] ApiConnect: Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  // Check if a location is in user's favorites (helper method)
+  static Future<bool> isLocationFavorite({required String locationId}) async {
+    try {
+      print('[DEBUG] ApiConnect: Checking if location is favorite...');
+      final response = await getFavoriteLocations();
+
+      if (response == null || response.statusCode != 200) {
+        print('[ERROR] ApiConnect: Could not fetch favorites to check status');
+        return false;
+      }
+
+      final data = jsonDecode(response.body);
+      List<dynamic> favorites = [];
+
+      // Handle different response formats
+      if (data is List) {
+        favorites = data;
+      } else if (data is Map && data['data'] is List) {
+        favorites = data['data'];
+      } else if (data is Map && data['favorites'] is List) {
+        favorites = data['favorites'];
+      }
+
+      // Check if locationId exists in favorites
+      for (var favorite in favorites) {
+        String favoriteId;
+        if (favorite is Map) {
+          favoriteId =
+              favorite['id']?.toString() ??
+              favorite['location_id']?.toString() ??
+              favorite['location']?.toString() ??
+              '';
+        } else {
+          favoriteId = favorite.toString();
+        }
+
+        if (favoriteId == locationId) {
+          print('[DEBUG] ApiConnect: Location $locationId is in favorites');
+          return true;
+        }
+      }
+
+      print('[DEBUG] ApiConnect: Location $locationId is not in favorites');
+      return false;
+    } catch (e) {
+      print('[ERROR] ApiConnect: Exception checking favorite status: $e');
+      return false;
+    }
+  }
+
+  // Toggle favorite status (add if not favorite, remove if favorite)
+  static Future<bool> toggleFavoriteLocation({
+    required String locationId,
+  }) async {
+    try {
+      print(
+        '[DEBUG] ApiConnect: Toggling favorite status for location $locationId',
+      );
+
+      final isFavorite = await isLocationFavorite(locationId: locationId);
+
+      http.Response? response;
+      if (isFavorite) {
+        print('[DEBUG] ApiConnect: Location is favorite, removing...');
+        response = await removeFavoriteLocation(locationId: locationId);
+      } else {
+        print('[DEBUG] ApiConnect: Location is not favorite, adding...');
+        response = await addFavoriteLocation(locationId: locationId);
+      }
+
+      if (response != null &&
+          (response.statusCode == 200 ||
+              response.statusCode == 201 ||
+              response.statusCode == 204)) {
+        print('[SUCCESS] ApiConnect: Favorite status toggled successfully');
+        return true;
+      } else {
+        print('[ERROR] ApiConnect: Failed to toggle favorite status');
+        return false;
+      }
+    } catch (e) {
+      print('[ERROR] ApiConnect: Exception toggling favorite status: $e');
+      return false;
     }
   }
 }

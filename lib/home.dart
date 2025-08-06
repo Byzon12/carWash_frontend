@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/dashboard.dart';
 import 'package:flutter_application_1/his.dart';
 import 'package:flutter_application_1/profile.dart';
+import 'package:flutter_application_1/screens/favorites_page.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_application_1/utilites/provider.dart';
 
@@ -33,6 +34,13 @@ class _HomePageState extends State<HomePage> {
         },
       ),
       BookingHistoryPage(),
+      FavoritesPage(
+        onNavigateToDashboard: () {
+          setState(() {
+            _selectedIndex = 0; // Navigate to dashboard
+          });
+        },
+      ),
       const ProfilePage(
         bookings: [],
       ), // ProfilePage reads bookings internally from provider
@@ -53,6 +61,7 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.book_online),
             label: 'Bookings',
           ),
+          BottomNavigationBarItem(icon: Icon(Icons.star), label: 'Favorites'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
         type: BottomNavigationBarType.fixed,

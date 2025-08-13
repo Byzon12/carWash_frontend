@@ -6,19 +6,11 @@ class NavigationTestButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FloatingActionButton.extended(
-      onPressed: () async {
-        print('🧪 Testing navigation to home...');
-
-        try {
+      onPressed: () async {try {
           // Test direct navigation to home
           Navigator.of(
             context,
-          ).pushNamedAndRemoveUntil('/home', (route) => false);
-          print('✅ Navigation test successful!');
-        } catch (e) {
-          print('❌ Navigation test failed: $e');
-
-          // Show error to user
+          ).pushNamedAndRemoveUntil('/home', (route) => false);} catch (e) {// Show error to user
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Navigation failed: $e'),
@@ -65,17 +57,13 @@ class NavigationDebugInfo extends StatelessWidget {
           Row(
             children: [
               ElevatedButton(
-                onPressed: () {
-                  print('Testing /home route...');
-                  Navigator.pushNamed(context, '/home');
+                onPressed: () {Navigator.pushNamed(context, '/home');
                 },
                 child: const Text('Test /home'),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: () {
-                  print('Testing /login route...');
-                  Navigator.pushNamed(context, '/login');
+                onPressed: () {Navigator.pushNamed(context, '/login');
                 },
                 child: const Text('Test /login'),
               ),

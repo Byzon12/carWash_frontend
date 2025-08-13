@@ -38,10 +38,6 @@ class LocationHelper {
 
       // Permission granted - get initial location
       final locationData = await _location.getLocation();
-      print(
-        '[LocationHelper] Location obtained: ${locationData.latitude}, ${locationData.longitude}',
-      );
-
       // Show success message
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -63,7 +59,6 @@ class LocationHelper {
 
       return true;
     } catch (e) {
-      print('[LocationHelper] Error requesting location: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -208,7 +203,6 @@ class LocationHelper {
       }
       return null;
     } catch (e) {
-      print('[LocationHelper] Error getting current location: $e');
       return null;
     }
   }
@@ -220,7 +214,6 @@ class LocationHelper {
       final permissionStatus = await _location.hasPermission();
       return serviceEnabled && permissionStatus == PermissionStatus.granted;
     } catch (e) {
-      print('[LocationHelper] Error checking location permission: $e');
       return false;
     }
   }

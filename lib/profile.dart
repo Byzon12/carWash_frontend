@@ -35,28 +35,23 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    print('[DEBUG] ProfilePage: Initializing ProfilePage');
     _initializeControllers();
     _loadUserProfile();
     _loadLoyaltyPoints(); // Load loyalty points when page initializes
     _loadBookingHistory(); // Load booking history from API
-    print('[DEBUG] ProfilePage: ProfilePage initialization completed');
   }
 
   void _initializeControllers() {
-    print('[DEBUG] ProfilePage: Initializing text controllers');
     _usernameController = TextEditingController();
     _emailController = TextEditingController();
     _firstNameController = TextEditingController();
     _lastNameController = TextEditingController();
     _addressController = TextEditingController();
     _phoneNumberController = TextEditingController();
-    print('[DEBUG] ProfilePage: Text controllers initialized successfully');
   }
 
   @override
   void dispose() {
-    print('[DEBUG] ProfilePage: Disposing text controllers');
     _usernameController.dispose();
     _emailController.dispose();
     _firstNameController.dispose();
@@ -64,28 +59,19 @@ class _ProfilePageState extends State<ProfilePage> {
     _addressController.dispose();
     _phoneNumberController.dispose();
     super.dispose();
-    print('[DEBUG] ProfilePage: ProfilePage disposed successfully');
   }
 
   Future<void> _loadUserProfile([bool showLoading = true]) async {
     try {
-      print('[DEBUG] ProfilePage: Starting to load user profile');
       if (showLoading) {
         setState(() => _loading = true);
       }
 
       // Try to get profile from API first
-      print('[DEBUG] ProfilePage: Attempting to fetch profile from API');
       final response = await ApiConnect.getUserProfile();
 
       if (response != null && response.statusCode == 200) {
-        print(
-          '[DEBUG] ProfilePage: API response successful, status: ${response.statusCode}',
-        );
         final profile = jsonDecode(response.body);
-        print(
-          '[DEBUG] ProfilePage: Profile data received: ${profile.keys.toList()}',
-        );
 
         setState(() {
           _userProfile = profile;
@@ -96,19 +82,11 @@ class _ProfilePageState extends State<ProfilePage> {
         if (showLoading) {
           await _loadLoyaltyPoints();
         }
-
-        print('[DEBUG] ProfilePage: Profile loaded successfully from API');
       } else {
-        print(
-          '[DEBUG] ProfilePage: API failed - Status: ${response?.statusCode}, falling back to stored data',
-        );
         // Fallback to stored user data
         await _loadStoredUserData();
       }
     } catch (e, stackTrace) {
-      print('[ERROR] ProfilePage: Exception in _loadUserProfile: $e');
-      print('[ERROR] ProfilePage: Stack trace: $stackTrace');
-
       // Show user-friendly error message only during full refresh
       if (mounted && showLoading) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -128,16 +106,11 @@ class _ProfilePageState extends State<ProfilePage> {
       if (showLoading) {
         setState(() => _loading = false);
       }
-      print('[DEBUG] ProfilePage: Profile loading completed');
     }
   }
 
   Future<void> _loadStoredUserData() async {
     try {
-      print(
-        '[DEBUG] ProfilePage: Loading stored user data from secure storage',
-      );
-
       // Load from secure storage
       final email = await ApiConnect.storage.read(key: 'email');
       final firstName = await ApiConnect.storage.read(key: 'first_name');
@@ -145,17 +118,6 @@ class _ProfilePageState extends State<ProfilePage> {
       final username = await ApiConnect.storage.read(key: 'username');
       final address = await ApiConnect.storage.read(key: 'address');
       final phoneNumber = await ApiConnect.storage.read(key: 'phone_number');
-
-      print(
-        '[DEBUG] ProfilePage: Stored data - Username: $username, Email: $email',
-      );
-      print(
-        '[DEBUG] ProfilePage: Stored data - FirstName: $firstName, LastName: $lastName',
-      );
-      print(
-        '[DEBUG] ProfilePage: Stored data - Address: $address, Phone: $phoneNumber',
-      );
-
       setState(() {
         _userProfile = {
           'email': email ?? 'user@example.com',
@@ -168,12 +130,7 @@ class _ProfilePageState extends State<ProfilePage> {
         };
         _updateControllers();
       });
-
-      print('[DEBUG] ProfilePage: Stored user data loaded successfully');
     } catch (e, stackTrace) {
-      print('[ERROR] ProfilePage: Exception in _loadStoredUserData: $e');
-      print('[ERROR] ProfilePage: Stack trace: $stackTrace');
-
       // Set default values if storage fails
       setState(() {
         _userProfile = {
@@ -203,8 +160,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _updateControllers() {
     try {
-      print('[DEBUG] ProfilePage: Updating text controllers with profile data');
-
       if (_userProfile != null) {
         _usernameController.text = _userProfile!['username'] ?? '';
         _emailController.text = _userProfile!['email'] ?? '';
@@ -212,26 +167,11 @@ class _ProfilePageState extends State<ProfilePage> {
         _lastNameController.text = _userProfile!['last_name'] ?? '';
         _addressController.text = _userProfile!['address'] ?? '';
         _phoneNumberController.text = _userProfile!['phone_number'] ?? '';
-
-        print(
-          '[DEBUG] ProfilePage: Controllers updated - Username: ${_usernameController.text}',
-        );
-        print(
-          '[DEBUG] ProfilePage: Controllers updated - Email: ${_emailController.text}',
-        );
-      } else {
-        print(
-          '[WARNING] ProfilePage: _userProfile is null, cannot update controllers',
-        );
-      }
-    } catch (e, stackTrace) {
-      print('[ERROR] ProfilePage: Exception in _updateControllers: $e');
-      print('[ERROR] ProfilePage: Stack trace: $stackTrace');
-    }
+      } else {}
+    } catch (e, stackTrace) {}
   }
 
   void _navigateToLoyaltyDashboard() {
-    print('[DEBUG] ProfilePage: Navigating to loyalty dashboard');
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const LoyaltyPointsScreen()),
@@ -240,7 +180,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadLoyaltyPoints() async {
     try {
-      print('[DEBUG] ProfilePage: Loading loyalty points from API');
       final response = await ApiConnect.getLoyaltyDashboard();
 
       if (response != null && response.statusCode == 200) {
@@ -251,24 +190,14 @@ class _ProfilePageState extends State<ProfilePage> {
             _userProfile ??= {};
             _userProfile!['loyalty_points'] = loyaltyStats['current_points'];
           });
-          print(
-            '[DEBUG] ProfilePage: Loyalty points updated: ${loyaltyStats['current_points']}',
-          );
         }
-      } else {
-        print(
-          '[DEBUG] ProfilePage: Failed to load loyalty points, using default',
-        );
-      }
-    } catch (e) {
-      print('[ERROR] ProfilePage: Exception loading loyalty points: $e');
-    }
+      } else {}
+    } catch (e) {}
   }
 
   // Load booking history from API
   Future<void> _loadBookingHistory() async {
     try {
-      print('[DEBUG] ProfilePage: Loading booking history from API');
       setState(() {
         _bookingHistoryLoading = true;
         _bookingHistoryError = null;
@@ -278,8 +207,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (response != null && response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('[DEBUG] ProfilePage: Booking history response: $data');
-
         if (data is List) {
           // If response is directly a list of bookings
           _parseBookingHistory(data);
@@ -299,16 +226,12 @@ class _ProfilePageState extends State<ProfilePage> {
               'Failed to load booking history: ${response?.statusCode ?? 'No response'}';
           _bookingHistoryLoading = false;
         });
-        print(
-          '[ERROR] ProfilePage: Failed to load booking history - Status: ${response?.statusCode}',
-        );
       }
     } catch (e) {
       setState(() {
         _bookingHistoryError = 'Error loading booking history: $e';
         _bookingHistoryLoading = false;
       });
-      print('[ERROR] ProfilePage: Exception loading booking history: $e');
     }
   }
 
@@ -365,9 +288,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   int.tryParse(bookingData['quantity']?.toString() ?? '1') ?? 1,
             );
             parsedBookings.add(booking);
-          } catch (e) {
-            print('[ERROR] ProfilePage: Error parsing individual booking: $e');
-          }
+          } catch (e) {}
         }
       }
 
@@ -376,30 +297,17 @@ class _ProfilePageState extends State<ProfilePage> {
         _bookingHistoryLoading = false;
         _bookingHistoryError = null;
       });
-
-      print(
-        '[SUCCESS] ProfilePage: Loaded ${parsedBookings.length} bookings from API',
-      );
     } catch (e) {
       setState(() {
         _bookingHistoryError = 'Error parsing booking history: $e';
         _bookingHistoryLoading = false;
       });
-      print('[ERROR] ProfilePage: Exception parsing booking history: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    print(
-      '[DEBUG] ProfilePage: Building UI - Loading: $_loading, Editing: $_isEditing',
-    );
-
     // Use API-loaded booking history instead of provider bookings
-    print(
-      '[DEBUG] ProfilePage: Found ${_bookingHistory.length} bookings from API',
-    );
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
@@ -408,7 +316,6 @@ class _ProfilePageState extends State<ProfilePage> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              print('[DEBUG] ProfilePage: Refresh button pressed');
               _loadUserProfile();
             },
             tooltip: 'Refresh Profile',
@@ -417,7 +324,6 @@ class _ProfilePageState extends State<ProfilePage> {
           IconButton(
             icon: const Icon(Icons.lock),
             onPressed: () {
-              print('[DEBUG] ProfilePage: Password change button pressed');
               _showChangePasswordDialog();
             },
             tooltip: 'Change Password',
@@ -431,7 +337,6 @@ class _ProfilePageState extends State<ProfilePage> {
           if (_isEditing)
             TextButton(
               onPressed: () {
-                print('[DEBUG] ProfilePage: Save button pressed');
                 _saveProfile();
               },
               child: const Text('Save', style: TextStyle(color: Colors.white)),
@@ -439,7 +344,6 @@ class _ProfilePageState extends State<ProfilePage> {
           if (_isEditing)
             TextButton(
               onPressed: () {
-                print('[DEBUG] ProfilePage: Cancel edit button pressed');
                 setState(() => _isEditing = false);
               },
               child: const Text(
@@ -522,7 +426,9 @@ class _ProfilePageState extends State<ProfilePage> {
                             borderRadius: BorderRadius.circular(15),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.orange.shade300.withOpacity(0.3),
+                                color: Colors.orange.shade300.withValues(
+                                  alpha: 0.3,
+                                ),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),
@@ -680,7 +586,6 @@ class _ProfilePageState extends State<ProfilePage> {
             !_isEditing
                 ? ElevatedButton.icon(
                   onPressed: () {
-                    print('[DEBUG] ProfilePage: Edit button pressed');
                     setState(() => _isEditing = true);
                   },
                   icon: const Icon(Icons.edit, size: 18),
@@ -892,29 +797,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _saveProfile() async {
     try {
-      print('[DEBUG] ProfilePage: Starting profile save operation');
-      print(
-        '[DEBUG] ProfilePage: Data to save - Username: ${_usernameController.text}',
-      );
-      print(
-        '[DEBUG] ProfilePage: Data to save - Email: ${_emailController.text}',
-      );
-      print(
-        '[DEBUG] ProfilePage: Data to save - FirstName: ${_firstNameController.text}',
-      );
-      print(
-        '[DEBUG] ProfilePage: Data to save - LastName: ${_lastNameController.text}',
-      );
-      print(
-        '[DEBUG] ProfilePage: Data to save - Address: ${_addressController.text}',
-      );
-      print(
-        '[DEBUG] ProfilePage: Data to save - Phone: ${_phoneNumberController.text}',
-      );
-
       // Validate required fields
       if (_usernameController.text.trim().isEmpty) {
-        print('[ERROR] ProfilePage: Username is empty');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Username cannot be empty'),
@@ -926,7 +810,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (_emailController.text.trim().isEmpty ||
           !_emailController.text.contains('@')) {
-        print('[ERROR] ProfilePage: Invalid email format');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please enter a valid email address'),
@@ -937,7 +820,6 @@ class _ProfilePageState extends State<ProfilePage> {
       }
 
       // Call the API to update the profile
-      print('[DEBUG] ProfilePage: Calling API to update profile');
       final response = await ApiConnect.updateProfile(
         username: _usernameController.text.trim(),
         email: _emailController.text.trim(),
@@ -952,22 +834,11 @@ class _ProfilePageState extends State<ProfilePage> {
                 ? _phoneNumberController.text.trim()
                 : null,
       );
-
-      print(
-        '[DEBUG] ProfilePage: API response status: ${response?.statusCode}',
-      );
-      if (response != null) {
-        print('[DEBUG] ProfilePage: API response body: ${response.body}');
-      }
+      if (response != null) {}
 
       if (response != null &&
           (response.statusCode == 200 || response.statusCode == 201)) {
-        print(
-          '[DEBUG] ProfilePage: API update successful, status: ${response.statusCode}',
-        );
-
         // Update local storage
-        print('[DEBUG] ProfilePage: Updating local storage');
         await ApiConnect.storage.write(
           key: 'username',
           value: _usernameController.text.trim(),
@@ -999,10 +870,7 @@ class _ProfilePageState extends State<ProfilePage> {
         });
 
         // Reload profile data from server to get the latest changes
-        print('[DEBUG] ProfilePage: Reloading profile data from server');
         await _loadUserProfile(false); // Don't show loading spinner
-
-        print('[DEBUG] ProfilePage: Profile saved and reloaded successfully');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -1013,12 +881,7 @@ class _ProfilePageState extends State<ProfilePage> {
         }
       } else {
         // API call failed, show error
-        print(
-          '[ERROR] ProfilePage: API update failed - Status: ${response?.statusCode}',
-        );
-        if (response != null) {
-          print('[ERROR] ProfilePage: API response body: ${response.body}');
-        }
+        if (response != null) {}
 
         String errorMessage = 'Failed to update profile on server';
         if (response != null) {
@@ -1031,9 +894,7 @@ class _ProfilePageState extends State<ProfilePage> {
             } else if (errorData['message'] != null) {
               errorMessage = errorData['message'];
             }
-          } catch (e) {
-            print('[WARNING] ProfilePage: Could not parse error response: $e');
-          }
+          } catch (e) {}
         } else {
           errorMessage = 'Network error: Could not connect to server';
         }
@@ -1049,9 +910,6 @@ class _ProfilePageState extends State<ProfilePage> {
         }
       }
     } catch (e, stackTrace) {
-      print('[ERROR] ProfilePage: Exception in _saveProfile: $e');
-      print('[ERROR] ProfilePage: Stack trace: $stackTrace');
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1065,8 +923,6 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showChangePasswordDialog() {
-    print('[DEBUG] ProfilePage: Showing change password dialog');
-
     final currentPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
@@ -1105,18 +961,12 @@ class _ProfilePageState extends State<ProfilePage> {
             actions: [
               TextButton(
                 onPressed: () {
-                  print(
-                    '[DEBUG] ProfilePage: Change password dialog cancelled',
-                  );
                   Navigator.pop(context);
                 },
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
                 onPressed: () {
-                  print(
-                    '[DEBUG] ProfilePage: Change password confirmed, processing...',
-                  );
                   _changePassword(
                     currentPasswordController.text,
                     newPasswordController.text,
@@ -1135,11 +985,8 @@ class _ProfilePageState extends State<ProfilePage> {
     String newPassword,
     String confirm,
   ) async {
-    print('[DEBUG] ProfilePage: Starting password change operation');
-
     // Validation checks
     if (current.trim().isEmpty) {
-      print('[ERROR] ProfilePage: Current password is empty');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Current password cannot be empty'),
@@ -1150,7 +997,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     if (newPassword != confirm) {
-      print('[ERROR] ProfilePage: New passwords do not match');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('New passwords do not match'),
@@ -1174,7 +1020,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     if (newPassword == current) {
-      print('[ERROR] ProfilePage: New password same as current');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('New password must be different from current password'),
@@ -1185,7 +1030,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     try {
-      print('[DEBUG] ProfilePage: Calling API to change password');
       final response = await ApiConnect.changePassword(
         currentPassword: current,
         newPassword: newPassword,
@@ -1193,10 +1037,7 @@ class _ProfilePageState extends State<ProfilePage> {
       );
 
       Navigator.pop(context); // Close dialog
-      print('[DEBUG] ProfilePage: Password change dialog closed');
-
       if (response != null && response.statusCode == 200) {
-        print('[DEBUG] ProfilePage: Password changed successfully');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Password changed successfully'),
@@ -1204,11 +1045,6 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         );
       } else {
-        print(
-          '[ERROR] ProfilePage: Password change failed - Status: ${response?.statusCode}',
-        );
-        print('[ERROR] ProfilePage: Response body: ${response?.body}');
-
         String errorMessage = 'Failed to change password';
         if (response != null) {
           try {
@@ -1223,7 +1059,6 @@ class _ProfilePageState extends State<ProfilePage> {
               errorMessage = 'Authentication failed. Please login again.';
             }
           } catch (e) {
-            print('[WARNING] ProfilePage: Could not parse error response: $e');
             errorMessage =
                 'Failed to change password (Status: ${response.statusCode})';
           }
@@ -1243,9 +1078,6 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       }
     } catch (e, stackTrace) {
-      print('[ERROR] ProfilePage: Exception in _changePassword: $e');
-      print('[ERROR] ProfilePage: Stack trace: $stackTrace');
-
       Navigator.pop(context); // Close dialog
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1262,8 +1094,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _logout() async {
     try {
-      print('[DEBUG] ProfilePage: Starting logout process');
-
       final confirmed = await showDialog<bool>(
         context: context,
         builder:
@@ -1293,14 +1123,12 @@ class _ProfilePageState extends State<ProfilePage> {
               actions: [
                 TextButton(
                   onPressed: () {
-                    print('[DEBUG] ProfilePage: Logout cancelled by user');
                     Navigator.pop(context, false);
                   },
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    print('[DEBUG] ProfilePage: Logout confirmed by user');
                     Navigator.pop(context, true);
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -1311,8 +1139,6 @@ class _ProfilePageState extends State<ProfilePage> {
       );
 
       if (confirmed == true) {
-        print('[DEBUG] ProfilePage: Performing logout operation');
-
         // Show loading indicator
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1339,10 +1165,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
         // Call the enhanced logout method
         final logoutSuccess = await ApiConnect.logout();
-        print(
-          '[DEBUG] ProfilePage: Logout completed with success: $logoutSuccess',
-        );
-
         if (mounted) {
           // Clear the loading snackbar
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -1367,7 +1189,6 @@ class _ProfilePageState extends State<ProfilePage> {
             Navigator.of(
               context,
             ).pushNamedAndRemoveUntil('/', (route) => false);
-            print('[DEBUG] ProfilePage: Navigation to login completed');
           } else {
             // Show error message but still navigate (local storage was cleared)
             ScaffoldMessenger.of(context).showSnackBar(
@@ -1396,18 +1217,9 @@ class _ProfilePageState extends State<ProfilePage> {
               '[DEBUG] ProfilePage: Navigation to login completed (with warnings)',
             );
           }
-        } else {
-          print(
-            '[WARNING] ProfilePage: Widget not mounted, skipping navigation',
-          );
-        }
-      } else {
-        print('[DEBUG] ProfilePage: Logout operation cancelled');
-      }
+        } else {}
+      } else {}
     } catch (e, stackTrace) {
-      print('[ERROR] ProfilePage: Exception during logout: $e');
-      print('[ERROR] ProfilePage: Stack trace: $stackTrace');
-
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1493,10 +1305,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _cancelBooking(Booking booking) {
     try {
-      print(
-        '[DEBUG] ProfilePage: Starting cancel booking for: ${booking.carWash.name}',
-      );
-
       showDialog(
         context: context,
         builder:
@@ -1508,9 +1316,6 @@ class _ProfilePageState extends State<ProfilePage> {
               actions: [
                 TextButton(
                   onPressed: () {
-                    print(
-                      '[DEBUG] ProfilePage: Booking cancellation cancelled by user',
-                    );
                     Navigator.pop(context);
                   },
                   child: const Text('No'),
@@ -1518,16 +1323,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 ElevatedButton(
                   onPressed: () {
                     try {
-                      print(
-                        '[DEBUG] ProfilePage: Confirming booking cancellation',
-                      );
                       // Remove booking from provider
                       context.read<CartProvider>().removeBooking(booking);
                       Navigator.pop(context);
-
-                      print(
-                        '[DEBUG] ProfilePage: Booking cancelled successfully',
-                      );
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Booking cancelled successfully'),
@@ -1535,11 +1333,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       );
                     } catch (e, stackTrace) {
-                      print(
-                        '[ERROR] ProfilePage: Error cancelling booking: $e',
-                      );
-                      print('[ERROR] ProfilePage: Stack trace: $stackTrace');
-
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -1558,9 +1351,6 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
       );
     } catch (e, stackTrace) {
-      print('[ERROR] ProfilePage: Exception in _cancelBooking: $e');
-      print('[ERROR] ProfilePage: Stack trace: $stackTrace');
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Error opening cancel dialog. Please try again.'),

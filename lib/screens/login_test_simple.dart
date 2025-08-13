@@ -38,11 +38,7 @@ class _SimpleLoginTestState extends State<SimpleLoginTest> {
           _isLoading = false;
         });
         return;
-      }
-
-      print('[TEST] Attempting login with username: $username');
-
-      final response = await ApiConnect.login(
+      }final response = await ApiConnect.login(
         username: username.contains('@') ? null : username,
         email: username.contains('@') ? username : null,
         password: password,

@@ -202,10 +202,7 @@ class CarWash {
   });
 
   // Enhanced method specifically for comprehensive Django API response format
-  factory CarWash.fromDjangoJson(Map<String, dynamic> json) {
-    print('[DEBUG] CarWash.fromDjangoJson: Parsing comprehensive Django JSON');
-
-    // Extract location services
+  factory CarWash.fromDjangoJson(Map<String, dynamic> json) {// Extract location services
     List<LocationService> locationServices = [];
     List<Service> allServices = [];
     if (json['location_services'] != null) {
@@ -299,10 +296,7 @@ class CarWash {
   }
 
   factory CarWash.fromJson(Map<String, dynamic> json) {
-    // Handle nested response structure
-    print('[DEBUG] CarWash.fromJson: Parsing JSON: ${json.toString()}');
-
-    // Extract services from available_services array
+    // Handle nested response structure// Extract services from available_services array
     List<Service> parsedServices = [];
     if (json['available_services'] != null) {
       final servicesList = json['available_services'] as List<dynamic>;

@@ -565,15 +565,8 @@ class _BookingScreenState extends State<BookingScreen> {
         bookingRequest,
       );
 
-      if (booking != null && mounted) {
-        print(
-          '[DEBUG] BookingScreen: Booking created successfully with ID: ${booking.id}',
-        );
-
-        // Validate that we have a valid booking ID
-        if (booking.id <= 0) {
-          print('[ERROR] BookingScreen: Invalid booking ID: ${booking.id}');
-          throw Exception(
+      if (booking != null && mounted) {// Validate that we have a valid booking ID
+        if (booking.id <= 0) {throw Exception(
             'Booking was created but received invalid booking ID',
           );
         }
@@ -594,9 +587,7 @@ class _BookingScreenState extends State<BookingScreen> {
       } else {
         throw Exception('Failed to create booking - no response from server');
       }
-    } catch (e) {
-      print('[ERROR] BookingScreen: Booking failed: $e');
-      if (mounted) {
+    } catch (e) {if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Booking failed: ${e.toString()}'),

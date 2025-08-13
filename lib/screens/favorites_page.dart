@@ -42,9 +42,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           }
         });
       }
-    } catch (e) {
-      print('[ERROR] FavoritesPage: Error loading favorites: $e');
-      if (mounted) {
+    } catch (e) {if (mounted) {
         setState(() {
           _isLoading = false;
           _errorMessage = 'Failed to load favorites: $e';
@@ -80,9 +78,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           );
         }
       }
-    } catch (e) {
-      print('[ERROR] FavoritesPage: Error removing favorite: $e');
-      if (mounted) {
+    } catch (e) {if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('An error occurred while removing favorite'),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/screens/components/slide.dart';
-import 'package:flutter_application_1/screens/main/reponsive%20.dart';
+import 'package:flutter_application_1/screens/main/responsive.dart';
 import 'package:flutter_application_1/screens/main/welcome/loginsignupbtn.dart';
 import 'package:flutter_application_1/screens/main/welcome/wel.dart';
 

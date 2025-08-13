@@ -37,9 +37,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
           _isLoading = false;
         });
       }
-    } catch (e) {
-      print('[ERROR] BookingHistoryPage: Error loading bookings: $e');
-      if (mounted) {
+    } catch (e) {if (mounted) {
         setState(() {
           _error = e.toString();
           _isLoading = false;
@@ -430,7 +428,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                       decoration: BoxDecoration(
                         color: _getPaymentStatusColor(
                           booking.paymentStatus,
-                        ).withOpacity(0.1),
+                        ).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: _getPaymentStatusColor(booking.paymentStatus),

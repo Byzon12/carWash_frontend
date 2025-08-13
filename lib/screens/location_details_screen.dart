@@ -36,11 +36,7 @@ class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
           _isLoadingFavorite = false;
         });
       }
-    } catch (e) {
-      print(
-        '[ERROR] LocationDetailsScreen: Error checking favorite status: $e',
-      );
-      if (mounted) {
+    } catch (e) {if (mounted) {
         setState(() => _isLoadingFavorite = false);
       }
     }
@@ -53,15 +49,7 @@ class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
       setState(() => _isTogglingFavorite = true);
 
       // Debug the location ID we're sending
-      final locationId = widget.carWash.id.toString();
-      print(
-        '[DEBUG] LocationDetailsScreen: Attempting to toggle favorite for location ID: $locationId',
-      );
-      print(
-        '[DEBUG] LocationDetailsScreen: CarWash name: ${widget.carWash.name}',
-      );
-
-      final success = await FavoritesService.toggleFavorite(locationId);
+      final locationId = widget.carWash.id.toString();final success = await FavoritesService.toggleFavorite(locationId);
 
       if (mounted) {
         if (success) {
@@ -127,9 +115,7 @@ class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
         }
         setState(() => _isTogglingFavorite = false);
       }
-    } catch (e) {
-      print('[ERROR] LocationDetailsScreen: Error toggling favorite: $e');
-      if (mounted) {
+    } catch (e) {if (mounted) {
         setState(() => _isTogglingFavorite = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -199,7 +185,7 @@ class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),
@@ -210,7 +196,7 @@ class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
                   ),
                 ),
                 child: Stack(
@@ -990,7 +976,7 @@ class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
+              color: Colors.grey.withValues(alpha: 0.3),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),
@@ -1169,15 +1155,8 @@ class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
     final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
     final Uri phoneUri = Uri.parse('tel:$cleanNumber');
 
-    try {
-      print('[DEBUG] LocationDetailsScreen: Attempting to call $cleanNumber');
-
-      if (await canLaunchUrl(phoneUri)) {
-        await launchUrl(phoneUri);
-        print('[SUCCESS] LocationDetailsScreen: Phone call initiated');
-      } else {
-        print('[ERROR] LocationDetailsScreen: Cannot launch phone call');
-        if (mounted) {
+    try {if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);} else {if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
@@ -1189,9 +1168,7 @@ class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
           );
         }
       }
-    } catch (e) {
-      print('[ERROR] LocationDetailsScreen: Error making phone call: $e');
-      if (mounted) {
+    } catch (e) {if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error making phone call: $e'),
@@ -1206,17 +1183,8 @@ class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
   void _sendEmail(String email) async {
     final Uri emailUri = Uri.parse('mailto:$email');
 
-    try {
-      print(
-        '[DEBUG] LocationDetailsScreen: Attempting to send email to $email',
-      );
-
-      if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri);
-        print('[SUCCESS] LocationDetailsScreen: Email app opened');
-      } else {
-        print('[ERROR] LocationDetailsScreen: Cannot launch email app');
-        if (mounted) {
+    try {if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);} else {if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
@@ -1228,9 +1196,7 @@ class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
           );
         }
       }
-    } catch (e) {
-      print('[ERROR] LocationDetailsScreen: Error opening email: $e');
-      if (mounted) {
+    } catch (e) {if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error opening email: $e'),
@@ -1245,13 +1211,7 @@ class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
   void _openDirections() async {
     final double lat = widget.carWash.latitude;
     final double lng = widget.carWash.longitude;
-    final String carWashName = widget.carWash.name;
-
-    print(
-      '[DEBUG] LocationDetailsScreen: Opening directions to $carWashName at $lat, $lng',
-    );
-
-    // Try Google Maps first (most common), then Apple Maps, then fallback to web
+    final String carWashName = widget.carWash.name;// Try Google Maps first (most common), then Apple Maps, then fallback to web
     final List<String> mapUrls = [
       // Google Maps app (Android/iOS)
       'google.navigation:q=$lat,$lng',
@@ -1275,23 +1235,13 @@ class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
                     ? LaunchMode.externalApplication
                     : LaunchMode.externalNonBrowserApplication,
           );
-          launched = true;
-          print(
-            '[SUCCESS] LocationDetailsScreen: Directions opened with $urlString',
-          );
-          break;
+          launched = true;break;
         }
-      } catch (e) {
-        print(
-          '[WARNING] LocationDetailsScreen: Failed to launch $urlString: $e',
-        );
-        continue;
+      } catch (e) {continue;
       }
     }
 
-    if (!launched) {
-      print('[ERROR] LocationDetailsScreen: All direction options failed');
-      if (mounted) {
+    if (!launched) {if (mounted) {
         // Show dialog with manual coordinates as fallback
         showDialog(
           context: context,
@@ -1334,11 +1284,7 @@ class _LocationDetailsScreenState extends State<LocationDetailsScreen> {
                         mode: LaunchMode.externalApplication,
                       );
                       Navigator.of(context).pop();
-                    } catch (e) {
-                      print(
-                        '[ERROR] LocationDetailsScreen: Failed to open web maps: $e',
-                      );
-                    }
+                    } catch (e) {}
                   },
                   child: const Text('Open in Browser'),
                 ),

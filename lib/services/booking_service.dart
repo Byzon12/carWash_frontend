@@ -87,8 +87,6 @@ class Booking {
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
-    print('[DEBUG] Booking.fromJson: Parsing booking data: $json');
-
     // Parse booking ID more robustly - try multiple possible field names
     int bookingId = 0;
 
@@ -113,10 +111,6 @@ class Booking {
         bookingId = int.tryParse(json['booking_id'].toString()) ?? 0;
       }
     }
-
-    print(
-      '[DEBUG] Booking.fromJson: Parsed booking ID: $bookingId from fields id=${json['id']}, booking_id=${json['booking_id']}',
-    );
 
     return Booking(
       id: bookingId,
@@ -202,18 +196,16 @@ class PaymentResponse {
 }
 
 class BookingService {
-  static const String baseUrl = 'http://192.168.0.108:8000';
-  static const String bookingEndpoint = '/booking';
+  // Use ApiConnect's dynamic base URL instead of hardcoded URL
+  static String get baseUrl => ApiConnect.bookingBaseUrl;
+  static const String bookingEndpoint = 'booking';
 
   // Create a new booking
   static Future<Booking?> createBooking(BookingRequest request) async {
-    print('[DEBUG] BookingService: Creating booking...');
-
     try {
       // Check connection first
       final isConnected = await ConnectionService.isBackendAvailable();
       if (!isConnected) {
-        print('[ERROR] BookingService: No backend connection available');
         throw Exception(
           'Backend server is not reachable. Please check your connection.',
         );
@@ -221,13 +213,10 @@ class BookingService {
 
       final token = await ApiConnect.getAccessToken();
       if (token == null) {
-        print('[ERROR] BookingService: No authentication token found');
         throw Exception('Authentication required. Please login again.');
       }
 
       final url = Uri.parse('$baseUrl$bookingEndpoint/create/');
-      print('[DEBUG] BookingService: POST $url');
-      print('[DEBUG] BookingService: Request data: ${request.toJson()}');
 
       final response = await http.post(
         url,
@@ -237,9 +226,6 @@ class BookingService {
         },
         body: jsonEncode(request.toJson()),
       );
-
-      print('[DEBUG] BookingService: Response status: ${response.statusCode}');
-      print('[DEBUG] BookingService: Response body: ${response.body}');
 
       if (response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
@@ -256,31 +242,25 @@ class BookingService {
         throw Exception(errorData['message'] ?? 'Failed to create booking');
       }
     } catch (e) {
-      print('[ERROR] BookingService: Error creating booking: $e');
       rethrow;
     }
   }
 
   // Get list of bookings for the authenticated user
   static Future<List<Booking>> getBookings() async {
-    print('[DEBUG] BookingService: Fetching bookings...');
-
     try {
       // Check connection first
       final isConnected = await ConnectionService.isBackendAvailable();
       if (!isConnected) {
-        print('[ERROR] BookingService: No backend connection available');
         return _getFallbackBookings();
       }
 
       final token = await ApiConnect.getAccessToken();
       if (token == null) {
-        print('[ERROR] BookingService: No authentication token found');
         return [];
       }
 
       final url = Uri.parse('$baseUrl$bookingEndpoint/list/');
-      print('[DEBUG] BookingService: GET $url');
 
       final response = await http.get(
         url,
@@ -289,63 +269,42 @@ class BookingService {
           'Authorization': 'Bearer $token',
         },
       );
-
-      print('[DEBUG] BookingService: Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
 
         // Handle both list and paginated response formats
         if (responseData is List) {
-          print(
-            '[DEBUG] BookingService: Found ${responseData.length} bookings',
-          );
           return responseData.map((json) => Booking.fromJson(json)).toList();
         } else if (responseData is Map && responseData.containsKey('results')) {
           // Handle paginated response
           final List<dynamic> data = responseData['results'];
-          print(
-            '[DEBUG] BookingService: Found ${data.length} bookings (paginated)',
-          );
           return data.map((json) => Booking.fromJson(json)).toList();
         } else {
-          print('[WARNING] BookingService: Unexpected response format');
           return [];
         }
       } else {
-        print(
-          '[ERROR] BookingService: Failed to fetch bookings: ${response.statusCode}',
-        );
         return _getFallbackBookings();
       }
     } catch (e) {
-      print('[ERROR] BookingService: Error fetching bookings: $e');
       return _getFallbackBookings();
     }
   }
 
   // Get specific booking details
   static Future<Booking?> getBookingDetails(int bookingId) async {
-    print(
-      '[DEBUG] BookingService: Fetching booking details for ID: $bookingId',
-    );
-
     try {
       final isConnected = await ConnectionService.isBackendAvailable();
       if (!isConnected) {
-        print('[ERROR] BookingService: No backend connection available');
         return null;
       }
 
       final token = await ApiConnect.getAccessToken();
       if (token == null) {
-        print('[ERROR] BookingService: No authentication token found');
         return null;
       }
 
       final url = Uri.parse('$baseUrl$bookingEndpoint/$bookingId/');
-      print('[DEBUG] BookingService: GET $url');
-
       final response = await http.get(
         url,
         headers: {
@@ -353,9 +312,6 @@ class BookingService {
           'Authorization': 'Bearer $token',
         },
       );
-
-      print('[DEBUG] BookingService: Response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
 
@@ -367,25 +323,18 @@ class BookingService {
           return Booking.fromJson(responseData);
         }
       } else {
-        print(
-          '[ERROR] BookingService: Failed to fetch booking details: ${response.statusCode}',
-        );
         return null;
       }
     } catch (e) {
-      print('[ERROR] BookingService: Error fetching booking details: $e');
       return null;
     }
   }
 
   // Cancel a booking
   static Future<bool> cancelBooking(int bookingId) async {
-    print('[DEBUG] BookingService: Cancelling booking ID: $bookingId');
-
     try {
       final isConnected = await ConnectionService.isBackendAvailable();
       if (!isConnected) {
-        print('[ERROR] BookingService: No backend connection available');
         throw Exception(
           'Backend server is not reachable. Please check your connection.',
         );
@@ -393,13 +342,10 @@ class BookingService {
 
       final token = await ApiConnect.getAccessToken();
       if (token == null) {
-        print('[ERROR] BookingService: No authentication token found');
         throw Exception('Authentication required. Please login again.');
       }
 
       final url = Uri.parse('$baseUrl$bookingEndpoint/$bookingId/cancel/');
-      print('[DEBUG] BookingService: POST $url');
-
       final response = await http.post(
         url,
         headers: {
@@ -407,30 +353,22 @@ class BookingService {
           'Authorization': 'Bearer $token',
         },
       );
-
-      print('[DEBUG] BookingService: Response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
-        print('[DEBUG] BookingService: Booking cancelled successfully');
         return true;
       } else {
         final errorData = jsonDecode(response.body);
         throw Exception(errorData['message'] ?? 'Failed to cancel booking');
       }
     } catch (e) {
-      print('[ERROR] BookingService: Error cancelling booking: $e');
       rethrow;
     }
   }
 
   // Delete a booking permanently
   static Future<bool> deleteBooking(int bookingId) async {
-    print('[DEBUG] BookingService: Deleting booking ID: $bookingId');
-
     try {
       final isConnected = await ConnectionService.isBackendAvailable();
       if (!isConnected) {
-        print('[ERROR] BookingService: No backend connection available');
         throw Exception(
           'Backend server is not reachable. Please check your connection.',
         );
@@ -438,13 +376,10 @@ class BookingService {
 
       final token = await ApiConnect.getAccessToken();
       if (token == null) {
-        print('[ERROR] BookingService: No authentication token found');
         throw Exception('Authentication required. Please login again.');
       }
 
       final url = Uri.parse('$baseUrl$bookingEndpoint/delete/$bookingId/');
-      print('[DEBUG] BookingService: DELETE $url');
-
       final response = await http.delete(
         url,
         headers: {
@@ -452,18 +387,13 @@ class BookingService {
           'Authorization': 'Bearer $token',
         },
       );
-
-      print('[DEBUG] BookingService: Response status: ${response.statusCode}');
-
       if (response.statusCode == 200 || response.statusCode == 204) {
-        print('[DEBUG] BookingService: Booking deleted successfully');
         return true;
       } else {
         final errorData = jsonDecode(response.body);
         throw Exception(errorData['message'] ?? 'Failed to delete booking');
       }
     } catch (e) {
-      print('[ERROR] BookingService: Error deleting booking: $e');
       rethrow;
     }
   }
@@ -472,12 +402,9 @@ class BookingService {
   static Future<PaymentResponse> initiatePayment(
     PaymentInitiationRequest request,
   ) async {
-    print('[DEBUG] BookingService: Initiating payment...');
-
     try {
       final isConnected = await ConnectionService.isBackendAvailable();
       if (!isConnected) {
-        print('[ERROR] BookingService: No backend connection available');
         throw Exception(
           'Backend server is not reachable. Please check your connection.',
         );
@@ -485,14 +412,10 @@ class BookingService {
 
       final token = await ApiConnect.getAccessToken();
       if (token == null) {
-        print('[ERROR] BookingService: No authentication token found');
         throw Exception('Authentication required. Please login again.');
       }
 
       final url = Uri.parse('$baseUrl$bookingEndpoint/payment/initiate/');
-      print('[DEBUG] BookingService: POST $url');
-      print('[DEBUG] BookingService: Payment request: ${request.toJson()}');
-
       final response = await http.post(
         url,
         headers: {
@@ -501,14 +424,9 @@ class BookingService {
         },
         body: jsonEncode(request.toJson()),
       );
-
-      print('[DEBUG] BookingService: Response status: ${response.statusCode}');
-      print('[DEBUG] BookingService: Response body: ${response.body}');
-
       final data = jsonDecode(response.body);
       return PaymentResponse.fromJson(data);
     } catch (e) {
-      print('[ERROR] BookingService: Error initiating payment: $e');
       rethrow;
     }
   }
@@ -517,14 +435,9 @@ class BookingService {
   static Future<PaymentResponse> checkPaymentStatus(
     String checkoutRequestId,
   ) async {
-    print(
-      '[DEBUG] BookingService: Checking payment status for: $checkoutRequestId',
-    );
-
     try {
       final isConnected = await ConnectionService.isBackendAvailable();
       if (!isConnected) {
-        print('[ERROR] BookingService: No backend connection available');
         throw Exception(
           'Backend server is not reachable. Please check your connection.',
         );
@@ -532,15 +445,12 @@ class BookingService {
 
       final token = await ApiConnect.getAccessToken();
       if (token == null) {
-        print('[ERROR] BookingService: No authentication token found');
         throw Exception('Authentication required. Please login again.');
       }
 
       final url = Uri.parse(
         '$baseUrl$bookingEndpoint/payment/status/?checkout_request_id=$checkoutRequestId',
       );
-      print('[DEBUG] BookingService: GET $url');
-
       final response = await http.get(
         url,
         headers: {
@@ -548,13 +458,9 @@ class BookingService {
           'Authorization': 'Bearer $token',
         },
       );
-
-      print('[DEBUG] BookingService: Response status: ${response.statusCode}');
-
       final data = jsonDecode(response.body);
       return PaymentResponse.fromJson(data);
     } catch (e) {
-      print('[ERROR] BookingService: Error checking payment status: $e');
       rethrow;
     }
   }
@@ -564,12 +470,9 @@ class BookingService {
     int bookingId,
     BookingRequest request,
   ) async {
-    print('[DEBUG] BookingService: Updating booking ID: $bookingId');
-
     try {
       final isConnected = await ConnectionService.isBackendAvailable();
       if (!isConnected) {
-        print('[ERROR] BookingService: No backend connection available');
         throw Exception(
           'Backend server is not reachable. Please check your connection.',
         );
@@ -577,14 +480,10 @@ class BookingService {
 
       final token = await ApiConnect.getAccessToken();
       if (token == null) {
-        print('[ERROR] BookingService: No authentication token found');
         throw Exception('Authentication required. Please login again.');
       }
 
       final url = Uri.parse('$baseUrl$bookingEndpoint/$bookingId/update/');
-      print('[DEBUG] BookingService: PUT $url');
-      print('[DEBUG] BookingService: Update data: ${request.toJson()}');
-
       final response = await http.put(
         url,
         headers: {
@@ -593,10 +492,6 @@ class BookingService {
         },
         body: jsonEncode(request.toJson()),
       );
-
-      print('[DEBUG] BookingService: Response status: ${response.statusCode}');
-      print('[DEBUG] BookingService: Response body: ${response.body}');
-
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
 
@@ -612,7 +507,6 @@ class BookingService {
         throw Exception(errorData['message'] ?? 'Failed to update booking');
       }
     } catch (e) {
-      print('[ERROR] BookingService: Error updating booking: $e');
       rethrow;
     }
   }
@@ -622,14 +516,9 @@ class BookingService {
     int bookingId,
     String phoneNumber,
   ) async {
-    print(
-      '[DEBUG] BookingService: Retrying payment for booking ID: $bookingId',
-    );
-
     try {
       final isConnected = await ConnectionService.isBackendAvailable();
       if (!isConnected) {
-        print('[ERROR] BookingService: No backend connection available');
         throw Exception(
           'Backend server is not reachable. Please check your connection.',
         );
@@ -637,22 +526,16 @@ class BookingService {
 
       final token = await ApiConnect.getAccessToken();
       if (token == null) {
-        print('[ERROR] BookingService: No authentication token found');
         throw Exception('Authentication required. Please login again.');
       }
 
       final url = Uri.parse(
         '$baseUrl$bookingEndpoint/$bookingId/payment/retry/',
       );
-      print('[DEBUG] BookingService: POST $url');
-
       final requestData = {
         'phone_number': phoneNumber,
         'payment_method': 'mpesa',
       };
-
-      print('[DEBUG] BookingService: Retry payment request: $requestData');
-
       final response = await http.post(
         url,
         headers: {
@@ -661,14 +544,9 @@ class BookingService {
         },
         body: jsonEncode(requestData),
       );
-
-      print('[DEBUG] BookingService: Response status: ${response.statusCode}');
-      print('[DEBUG] BookingService: Response body: ${response.body}');
-
       final data = jsonDecode(response.body);
       return PaymentResponse.fromJson(data);
     } catch (e) {
-      print('[ERROR] BookingService: Error retrying payment: $e');
       rethrow;
     }
   }
@@ -677,14 +555,9 @@ class BookingService {
   static Future<Map<String, dynamic>> getBookingPaymentStatus(
     int bookingId,
   ) async {
-    print(
-      '[DEBUG] BookingService: Getting payment status for booking ID: $bookingId',
-    );
-
     try {
       final isConnected = await ConnectionService.isBackendAvailable();
       if (!isConnected) {
-        print('[ERROR] BookingService: No backend connection available');
         throw Exception(
           'Backend server is not reachable. Please check your connection.',
         );
@@ -692,15 +565,12 @@ class BookingService {
 
       final token = await ApiConnect.getAccessToken();
       if (token == null) {
-        print('[ERROR] BookingService: No authentication token found');
         throw Exception('Authentication required. Please login again.');
       }
 
       final url = Uri.parse(
         '$baseUrl$bookingEndpoint/$bookingId/payment/status/',
       );
-      print('[DEBUG] BookingService: GET $url');
-
       final response = await http.get(
         url,
         headers: {
@@ -708,9 +578,6 @@ class BookingService {
           'Authorization': 'Bearer $token',
         },
       );
-
-      print('[DEBUG] BookingService: Response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data;
@@ -719,7 +586,6 @@ class BookingService {
         throw Exception(errorData['message'] ?? 'Failed to get payment status');
       }
     } catch (e) {
-      print('[ERROR] BookingService: Error getting payment status: $e');
       rethrow;
     }
   }
@@ -730,12 +596,9 @@ class BookingService {
     DateTime newDate,
     String newTime,
   ) async {
-    print('[DEBUG] BookingService: Rescheduling booking ID: $bookingId');
-
     try {
       final isConnected = await ConnectionService.isBackendAvailable();
       if (!isConnected) {
-        print('[ERROR] BookingService: No backend connection available');
         throw Exception(
           'Backend server is not reachable. Please check your connection.',
         );
@@ -743,20 +606,14 @@ class BookingService {
 
       final token = await ApiConnect.getAccessToken();
       if (token == null) {
-        print('[ERROR] BookingService: No authentication token found');
         throw Exception('Authentication required. Please login again.');
       }
 
       final url = Uri.parse('$baseUrl$bookingEndpoint/$bookingId/reschedule/');
-      print('[DEBUG] BookingService: POST $url');
-
       final requestData = {
         'booking_date': newDate.toIso8601String().split('T')[0],
         'booking_time': newTime,
       };
-
-      print('[DEBUG] BookingService: Reschedule request: $requestData');
-
       final response = await http.post(
         url,
         headers: {
@@ -765,10 +622,6 @@ class BookingService {
         },
         body: jsonEncode(requestData),
       );
-
-      print('[DEBUG] BookingService: Response status: ${response.statusCode}');
-      print('[DEBUG] BookingService: Response body: ${response.body}');
-
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
 
@@ -784,7 +637,6 @@ class BookingService {
         throw Exception(errorData['message'] ?? 'Failed to reschedule booking');
       }
     } catch (e) {
-      print('[ERROR] BookingService: Error rescheduling booking: $e');
       rethrow;
     }
   }
@@ -796,18 +648,14 @@ class BookingService {
     DateTime? fromDate,
     DateTime? toDate,
   }) async {
-    print('[DEBUG] BookingService: Fetching booking history with filters...');
-
     try {
       final isConnected = await ConnectionService.isBackendAvailable();
       if (!isConnected) {
-        print('[ERROR] BookingService: No backend connection available');
         return _getFallbackBookings();
       }
 
       final token = await ApiConnect.getAccessToken();
       if (token == null) {
-        print('[ERROR] BookingService: No authentication token found');
         return [];
       }
 
@@ -825,9 +673,6 @@ class BookingService {
       final uri = Uri.parse(
         '$baseUrl$bookingEndpoint/history/',
       ).replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
-
-      print('[DEBUG] BookingService: GET $uri');
-
       final response = await http.get(
         uri,
         headers: {
@@ -835,9 +680,6 @@ class BookingService {
           'Authorization': 'Bearer $token',
         },
       );
-
-      print('[DEBUG] BookingService: Response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
 
@@ -847,25 +689,18 @@ class BookingService {
           final List<dynamic> data = responseData['results'];
           return data.map((json) => Booking.fromJson(json)).toList();
         } else {
-          print('[WARNING] BookingService: Unexpected response format');
           return [];
         }
       } else {
-        print(
-          '[ERROR] BookingService: Failed to fetch booking history: ${response.statusCode}',
-        );
         return _getFallbackBookings();
       }
     } catch (e) {
-      print('[ERROR] BookingService: Error fetching booking history: $e');
       return _getFallbackBookings();
     }
   }
 
   // Fallback data for offline scenarios
   static List<Booking> _getFallbackBookings() {
-    print('[DEBUG] BookingService: Using fallback booking data');
-
     return [
       Booking(
         id: 1,

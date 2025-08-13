@@ -44,12 +44,10 @@ class ApiConnect {
 
   // Helper method to get your computer's IP for wireless debugging
   static void printNetworkInstructions() {
-    print('=== WIRELESS DEBUGGING SETUP ===');
     print('Current base URL: $baseUrl');
     print('Current platform: ${kIsWeb ? "Web" : "Mobile"}');
     print('Debug mode: $kDebugMode');
     print('Configured IP: $_wirelessDebugIP:8000');
-    print('');
     print('TROUBLESHOOTING STEPS:');
     print('1. Open Command Prompt and run: ipconfig');
     print('2. Find your WiFi adapter IPv4 Address (usually 192.168.x.x)');
@@ -57,12 +55,10 @@ class ApiConnect {
     print('4. Make sure your phone and computer are on the same WiFi network');
     print('5. Ensure your backend server is running on port 8000');
     print('6. Check Windows Firewall settings');
-    print('');
     print('COMMON IPs to try:');
     print('- 192.168.1.x (most common home routers)');
     print('- 192.168.0.x (some routers)');
     print('- 10.0.0.x (some networks)');
-    print('================================');
   }
 
   // User authentication base URL
@@ -112,12 +108,8 @@ class ApiConnect {
     String? email,
     required String password,
   }) async {
-    print('[DEBUG] ApiConnect: Starting login request');
-    print('[DEBUG] ApiConnect: Using user base URL: $userBaseUrl');
-    print('[DEBUG] ApiConnect: Platform - Web: $kIsWeb');
 
     final url = Uri.parse('${userBaseUrl}login/');
-    print('[DEBUG] ApiConnect: Full login URL: $url');
 
     // Create body map with conditional logic
     Map<String, dynamic> body = {'password': password};
@@ -130,7 +122,6 @@ class ApiConnect {
     print('🔍 Login request body: ${jsonEncode(body)}'); // Debug log
 
     try {
-      print('[DEBUG] ApiConnect: Sending HTTP POST request...');
       final response = await http
           .post(
             url,
@@ -143,18 +134,15 @@ class ApiConnect {
           .timeout(
             const Duration(seconds: 30), // Increased timeout
             onTimeout: () {
-              print('[ERROR] ApiConnect: Request timed out after 30 seconds');
               throw Exception(
                 'Connection timeout - Unable to connect to server',
               );
             },
           );
 
-      print('[DEBUG] ApiConnect: HTTP request completed successfully');
       print(
         '[DEBUG] ApiConnect: Login response status: ${response.statusCode}',
       );
-      print('[DEBUG] ApiConnect: Login response body: ${response.body}');
 
       // Log detailed error information for debugging
       if (response.statusCode != 200 && response.statusCode != 201) {
@@ -163,15 +151,12 @@ class ApiConnect {
         );
         try {
           final errorData = jsonDecode(response.body);
-          print('[ERROR] ApiConnect: Server error details: $errorData');
         } catch (e) {
-          print('[ERROR] ApiConnect: Could not parse error response: $e');
         }
       }
 
       // Handle successful login response
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('[DEBUG] ApiConnect: Login successful, storing user data');
         try {
           final data = jsonDecode(response.body);
 
@@ -193,9 +178,7 @@ class ApiConnect {
             await storage.write(key: 'last_name', value: data['last_name']);
           }
 
-          print('[DEBUG] ApiConnect: User data stored successfully');
         } catch (e) {
-          print('[ERROR] ApiConnect: Error parsing/storing login response: $e');
         }
       } else {
         print(
@@ -205,7 +188,6 @@ class ApiConnect {
 
       return response;
     } catch (e) {
-      print('[ERROR] ApiConnect: Network error during login: $e');
       // Create a mock response for network errors
       final errorResponse = http.Response(
         jsonEncode({
@@ -249,17 +231,14 @@ class ApiConnect {
   // Logout method - calls backend logout API then clears local storage
   static Future<bool> logout() async {
     try {
-      print('[DEBUG] ApiConnect: Starting logout process...');
 
       // Get the current access token
       final token = await getAccessToken();
 
       if (token != null && token.isNotEmpty) {
-        print('[DEBUG] ApiConnect: Calling backend logout API...');
 
         // Call backend logout endpoint
         final url = Uri.parse('${userBaseUrl}logout/');
-        print('[DEBUG] ApiConnect: Logout URL: $url');
 
         final response = await http.post(
           url,
@@ -272,7 +251,6 @@ class ApiConnect {
         print(
           '[DEBUG] ApiConnect: Logout response status: ${response.statusCode}',
         );
-        print('[DEBUG] ApiConnect: Logout response body: ${response.body}');
 
         if (response.statusCode == 200 || response.statusCode == 204) {
           print('[SUCCESS] ApiConnect: Backend logout successful');
@@ -288,19 +266,16 @@ class ApiConnect {
         );
       }
     } catch (e) {
-      print('[ERROR] ApiConnect: Backend logout error: $e');
       // Continue with local logout even if backend call fails
     }
 
     try {
       // Always clear local storage regardless of backend response
-      print('[DEBUG] ApiConnect: Clearing local storage...');
       await storage.deleteAll();
       print('[SUCCESS] ApiConnect: Local storage cleared successfully');
 
       return true; // Return true if local storage is cleared successfully
     } catch (e) {
-      print('[ERROR] ApiConnect: Failed to clear local storage: $e');
       return false;
     }
   }
@@ -313,28 +288,22 @@ class ApiConnect {
   // Check if user is logged in
   static Future<bool> isLoggedIn() async {
     try {
-      print('[DEBUG] ApiConnect: Checking if user is logged in...');
       final token = await getAccessToken();
 
       if (token == null || token.isEmpty) {
-        print('[DEBUG] ApiConnect: No access token found');
         return false;
       }
 
-      print('[DEBUG] ApiConnect: Access token found, checking validity...');
 
       // Try to make a simple API call to verify token validity
       final response = await getUserProfile();
       if (response != null && response.statusCode == 200) {
-        print('[DEBUG] ApiConnect: Token is valid, user is logged in');
         return true;
       } else if (response != null && response.statusCode == 401) {
-        print('[DEBUG] ApiConnect: Token expired, trying to refresh...');
 
         // Try to refresh the token
         final refreshResponse = await refreshToken();
         if (refreshResponse != null && refreshResponse.statusCode == 200) {
-          print('[DEBUG] ApiConnect: Token refreshed successfully');
           return true;
         } else {
           print(
@@ -344,18 +313,15 @@ class ApiConnect {
           return false;
         }
       } else {
-        print('[DEBUG] ApiConnect: Token validation failed');
         return false;
       }
     } catch (e) {
-      print('[ERROR] ApiConnect: Exception checking login status: $e');
       return false;
     }
   }
 
   // Password reset method
   static Future<http.Response> passwordReset(String email) async {
-    print('[DEBUG] ApiConnect: Sending password reset for email: $email');
     final url = Uri.parse('${userBaseUrl}password-reset/');
     final response = await http
         .post(
@@ -368,7 +334,6 @@ class ApiConnect {
     print(
       '[DEBUG] ApiConnect: Password reset response status: ${response.statusCode}',
     );
-    print('[DEBUG] ApiConnect: Password reset response body: ${response.body}');
 
     // Log detailed error information for debugging
     if (response.statusCode != 200 && response.statusCode != 201) {
@@ -377,7 +342,6 @@ class ApiConnect {
       );
       try {
         final errorData = jsonDecode(response.body);
-        print('[ERROR] ApiConnect: Password reset error details: $errorData');
       } catch (e) {
         print(
           '[ERROR] ApiConnect: Could not parse password reset error response: $e',
@@ -421,10 +385,8 @@ class ApiConnect {
     String? phoneNumber,
   }) async {
     try {
-      print('[DEBUG] ApiConnect: Updating user profile...');
       final token = await getAccessToken();
       if (token == null) {
-        print('[ERROR] ApiConnect: No access token for profile update');
         return null;
       }
 
@@ -438,8 +400,6 @@ class ApiConnect {
         if (phoneNumber != null) 'phone_number': phoneNumber,
       };
 
-      print('[DEBUG] ApiConnect: Profile update URL: $url');
-      print('[DEBUG] ApiConnect: Profile update request body: $requestBody');
 
       final response = await http
           .put(
@@ -461,7 +421,6 @@ class ApiConnect {
 
       return response;
     } catch (e) {
-      print('[ERROR] ApiConnect: Exception during profile update: $e');
       return null;
     }
   }
@@ -501,8 +460,6 @@ class ApiConnect {
   // Get car wash locations method
   static Future<http.Response?> getLocations() async {
     try {
-      print('[DEBUG] ApiConnect: Fetching car wash locations...');
-      print('[DEBUG] ApiConnect: Using user base URL: $userBaseUrl');
 
       // Get the authentication token
       final token = await getAccessToken();
@@ -514,7 +471,6 @@ class ApiConnect {
       }
 
       final url = Uri.parse('${userBaseUrl}locations/');
-      print('[DEBUG] ApiConnect: Full locations URL: $url');
 
       final response = await http
           .get(
@@ -529,7 +485,6 @@ class ApiConnect {
       print(
         '[DEBUG] ApiConnect: Locations response status: ${response.statusCode}',
       );
-      print('[DEBUG] ApiConnect: Locations response body: ${response.body}');
 
       // Log detailed error information for debugging
       if (response.statusCode != 200) {
@@ -538,7 +493,6 @@ class ApiConnect {
         );
         try {
           final errorData = jsonDecode(response.body);
-          print('[ERROR] ApiConnect: Locations error details: $errorData');
         } catch (e) {
           print(
             '[ERROR] ApiConnect: Could not parse locations error response: $e',
@@ -548,8 +502,6 @@ class ApiConnect {
 
       return response;
     } catch (e, stackTrace) {
-      print('[ERROR] ApiConnect: Exception fetching locations: $e');
-      print('[ERROR] ApiConnect: Stack trace: $stackTrace');
       return null;
     }
   }
@@ -559,15 +511,12 @@ class ApiConnect {
   // Get loyalty dashboard data
   static Future<http.Response?> getLoyaltyDashboard() async {
     try {
-      print('[DEBUG] ApiConnect: Fetching loyalty dashboard...');
       final token = await getAccessToken();
       if (token == null) {
-        print('[ERROR] ApiConnect: No access token for loyalty dashboard');
         return null;
       }
 
       final url = Uri.parse('${userBaseUrl}loyalty/dashboard/');
-      print('[DEBUG] ApiConnect: Loyalty dashboard URL: $url');
 
       final response = await http
           .get(
@@ -588,8 +537,6 @@ class ApiConnect {
 
       return response;
     } catch (e, stackTrace) {
-      print('[ERROR] ApiConnect: Exception fetching loyalty dashboard: $e');
-      print('[ERROR] ApiConnect: Stack trace: $stackTrace');
       return null;
     }
   }
@@ -597,10 +544,8 @@ class ApiConnect {
   // Get loyalty points history
   static Future<http.Response?> getLoyaltyHistory() async {
     try {
-      print('[DEBUG] ApiConnect: Fetching loyalty history...');
       final token = await getAccessToken();
       if (token == null) {
-        print('[ERROR] ApiConnect: No access token for loyalty history');
         return null;
       }
 
@@ -620,7 +565,6 @@ class ApiConnect {
       );
       return response;
     } catch (e) {
-      print('[ERROR] ApiConnect: Exception fetching loyalty history: $e');
       return null;
     }
   }
@@ -631,10 +575,8 @@ class ApiConnect {
     required String rewardType,
   }) async {
     try {
-      print('[DEBUG] ApiConnect: Redeeming loyalty points...');
       final token = await getAccessToken();
       if (token == null) {
-        print('[ERROR] ApiConnect: No access token for loyalty redemption');
         return null;
       }
 
@@ -655,7 +597,6 @@ class ApiConnect {
       );
       return response;
     } catch (e) {
-      print('[ERROR] ApiConnect: Exception redeeming loyalty points: $e');
       return null;
     }
   }
@@ -663,10 +604,8 @@ class ApiConnect {
   // Get loyalty tier information
   static Future<http.Response?> getLoyaltyTierInfo() async {
     try {
-      print('[DEBUG] ApiConnect: Fetching loyalty tier info...');
       final token = await getAccessToken();
       if (token == null) {
-        print('[ERROR] ApiConnect: No access token for loyalty tier info');
         return null;
       }
 
@@ -686,15 +625,12 @@ class ApiConnect {
       );
       return response;
     } catch (e) {
-      print('[ERROR] ApiConnect: Exception fetching loyalty tier info: $e');
       return null;
     }
   }
 
   // Test network connectivity to backend
   static Future<bool> testConnectivity() async {
-    print('[DEBUG] ApiConnect: === CONNECTIVITY TEST ===');
-    print('[DEBUG] ApiConnect: Testing connectivity to $baseUrl');
 
     try {
       // Test multiple endpoints to see which one responds
@@ -707,7 +643,6 @@ class ApiConnect {
 
       for (String testUrl in testUrls) {
         try {
-          print('[DEBUG] ApiConnect: Testing URL: $testUrl');
           final url = Uri.parse(testUrl);
           final response = await http
               .get(url)
@@ -723,7 +658,6 @@ class ApiConnect {
             '[SUCCESS] ApiConnect: $testUrl responded with status ${response.statusCode}',
           );
           if (response.statusCode < 500) {
-            print('[DEBUG] ApiConnect: Server is reachable!');
             return true;
           }
         } catch (e) {
@@ -731,11 +665,8 @@ class ApiConnect {
         }
       }
 
-      print('[ERROR] ApiConnect: All connectivity tests failed');
       return false;
     } catch (e) {
-      print('[ERROR] ApiConnect: Connectivity test exception: $e');
-      print('[ERROR] ApiConnect: TROUBLESHOOTING CHECKLIST:');
       print('  ✓ Backend server running? Check terminal/console');
       print('  ✓ Correct IP in _wirelessDebugIP? Run ipconfig');
       print('  ✓ Same WiFi network? Check phone and computer WiFi');
@@ -747,7 +678,6 @@ class ApiConnect {
 
   // Test logout API directly - for debugging purposes
   static Future<void> testLogoutAPI() async {
-    print('[DEBUG] ApiConnect: Testing logout API directly...');
 
     try {
       final token = await getAccessToken();
@@ -756,12 +686,10 @@ class ApiConnect {
       );
 
       if (token == null || token.isEmpty) {
-        print('[WARNING] ApiConnect: No token found for logout test');
         return;
       }
 
       final url = Uri.parse('${userBaseUrl}logout/');
-      print('[DEBUG] ApiConnect: Testing logout URL: $url');
 
       final response = await http.post(
         url,
@@ -771,7 +699,6 @@ class ApiConnect {
         },
       );
 
-      print('[DEBUG] ApiConnect: Logout test response:');
       print('  Status: ${response.statusCode}');
       print('  Headers: ${response.headers}');
       print('  Body: ${response.body}');
@@ -784,22 +711,18 @@ class ApiConnect {
         );
       }
     } catch (e) {
-      print('[ERROR] ApiConnect: Logout API test exception: $e');
     }
   }
 
   // Get user booking history
   static Future<http.Response?> getUserBookingHistory() async {
     try {
-      print('[DEBUG] ApiConnect: Fetching user booking history...');
       final token = await getAccessToken();
       if (token == null) {
-        print('[ERROR] ApiConnect: No access token found for booking history');
         return null;
       }
 
       final url = Uri.parse('$bookingBaseUrl/booking/history/');
-      print('[DEBUG] ApiConnect: Booking history URL: $url');
 
       final response = await http
           .get(
@@ -820,12 +743,10 @@ class ApiConnect {
         print(
           '[ERROR] ApiConnect: Booking history fetch failed: ${response.statusCode}',
         );
-        print('[ERROR] ApiConnect: Response body: ${response.body}');
       }
 
       return response;
     } catch (e) {
-      print('[ERROR] ApiConnect: Exception fetching booking history: $e');
       return null;
     }
   }
@@ -837,21 +758,17 @@ class ApiConnect {
     required String locationId,
   }) async {
     try {
-      print('[DEBUG] ApiConnect: Adding location to favorites...');
       final token = await getAccessToken();
       if (token == null) {
-        print('[ERROR] ApiConnect: No access token for adding favorite');
         return null;
       }
 
       final url = Uri.parse('${userBaseUrl}favorites/add/');
-      print('[DEBUG] ApiConnect: Add favorite URL: $url');
       print(
         '[DEBUG] ApiConnect: Adding location ID: $locationId (type: ${locationId.runtimeType})',
       );
 
       final requestBody = jsonEncode({'location_id': locationId});
-      print('[DEBUG] ApiConnect: Request body: $requestBody');
 
       final response = await http
           .post(
@@ -867,7 +784,6 @@ class ApiConnect {
       print(
         '[DEBUG] ApiConnect: Add favorite response status: ${response.statusCode}',
       );
-      print('[DEBUG] ApiConnect: Add favorite response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         print('[SUCCESS] ApiConnect: Location added to favorites successfully');
@@ -877,7 +793,6 @@ class ApiConnect {
         );
         try {
           final errorData = jsonDecode(response.body);
-          print('[ERROR] ApiConnect: Add favorite error details: $errorData');
 
           // Check if it's a location not found error
           if (errorData.toString().contains('DoesNotExist') ||
@@ -900,8 +815,6 @@ class ApiConnect {
 
       return response;
     } catch (e, stackTrace) {
-      print('[ERROR] ApiConnect: Exception adding favorite location: $e');
-      print('[ERROR] ApiConnect: Stack trace: $stackTrace');
       return null;
     }
   }
@@ -911,16 +824,12 @@ class ApiConnect {
     required String locationId,
   }) async {
     try {
-      print('[DEBUG] ApiConnect: Removing location from favorites...');
       final token = await getAccessToken();
       if (token == null) {
-        print('[ERROR] ApiConnect: No access token for removing favorite');
         return null;
       }
 
       final url = Uri.parse('${userBaseUrl}favorites/remove/');
-      print('[DEBUG] ApiConnect: Remove favorite URL: $url');
-      print('[DEBUG] ApiConnect: Removing location ID: $locationId');
 
       final response = await http
           .post(
@@ -962,8 +871,6 @@ class ApiConnect {
 
       return response;
     } catch (e, stackTrace) {
-      print('[ERROR] ApiConnect: Exception removing favorite location: $e');
-      print('[ERROR] ApiConnect: Stack trace: $stackTrace');
       return null;
     }
   }
@@ -971,15 +878,12 @@ class ApiConnect {
   // Get list of user's favorite locations
   static Future<http.Response?> getFavoriteLocations() async {
     try {
-      print('[DEBUG] ApiConnect: Fetching favorite locations...');
       final token = await getAccessToken();
       if (token == null) {
-        print('[ERROR] ApiConnect: No access token for favorite locations');
         return null;
       }
 
       final url = Uri.parse('${userBaseUrl}favorites/');
-      print('[DEBUG] ApiConnect: Get favorites URL: $url');
 
       final response = await http
           .get(
@@ -1008,9 +912,7 @@ class ApiConnect {
                   : (data is Map && data['data'] is List)
                   ? data['data'].length
                   : 0;
-          print('[DEBUG] ApiConnect: Found $favoritesCount favorite locations');
         } catch (e) {
-          print('[DEBUG] ApiConnect: Could not count favorites: $e');
         }
       } else {
         print(
@@ -1018,7 +920,6 @@ class ApiConnect {
         );
         try {
           final errorData = jsonDecode(response.body);
-          print('[ERROR] ApiConnect: Get favorites error details: $errorData');
         } catch (e) {
           print(
             '[ERROR] ApiConnect: Could not parse get favorites error response: $e',
@@ -1028,8 +929,6 @@ class ApiConnect {
 
       return response;
     } catch (e, stackTrace) {
-      print('[ERROR] ApiConnect: Exception fetching favorite locations: $e');
-      print('[ERROR] ApiConnect: Stack trace: $stackTrace');
       return null;
     }
   }
@@ -1037,11 +936,9 @@ class ApiConnect {
   // Check if a location is in user's favorites (helper method)
   static Future<bool> isLocationFavorite({required String locationId}) async {
     try {
-      print('[DEBUG] ApiConnect: Checking if location is favorite...');
       final response = await getFavoriteLocations();
 
       if (response == null || response.statusCode != 200) {
-        print('[ERROR] ApiConnect: Could not fetch favorites to check status');
         return false;
       }
 
@@ -1071,15 +968,12 @@ class ApiConnect {
         }
 
         if (favoriteId == locationId) {
-          print('[DEBUG] ApiConnect: Location $locationId is in favorites');
           return true;
         }
       }
 
-      print('[DEBUG] ApiConnect: Location $locationId is not in favorites');
       return false;
     } catch (e) {
-      print('[ERROR] ApiConnect: Exception checking favorite status: $e');
       return false;
     }
   }
@@ -1097,10 +991,8 @@ class ApiConnect {
 
       http.Response? response;
       if (isFavorite) {
-        print('[DEBUG] ApiConnect: Location is favorite, removing...');
         response = await removeFavoriteLocation(locationId: locationId);
       } else {
-        print('[DEBUG] ApiConnect: Location is not favorite, adding...');
         response = await addFavoriteLocation(locationId: locationId);
       }
 
@@ -1111,11 +1003,9 @@ class ApiConnect {
         print('[SUCCESS] ApiConnect: Favorite status toggled successfully');
         return true;
       } else {
-        print('[ERROR] ApiConnect: Failed to toggle favorite status');
         return false;
       }
     } catch (e) {
-      print('[ERROR] ApiConnect: Exception toggling favorite status: $e');
       return false;
     }
   }

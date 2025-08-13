@@ -65,9 +65,7 @@ class _QuickBackendTestState extends State<QuickBackendTest> {
   void _updateResult(String message) {
     setState(() {
       _testResult += '$message\n';
-    });
-    print('[QUICK_TEST] $message');
-  }
+    });}
 
   @override
   Widget build(BuildContext context) {

@@ -141,7 +141,7 @@ class _LoyaltyPointsScreenState extends State<LoyaltyPointsScreen> {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: Colors.white.withOpacity(0.2),
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
                   child: Text(
                     customerInfo.username.isNotEmpty
                         ? customerInfo.username[0].toUpperCase()
@@ -161,7 +161,7 @@ class _LoyaltyPointsScreenState extends State<LoyaltyPointsScreen> {
                       Text(
                         'Welcome back!',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 14,
                         ),
                       ),
@@ -176,7 +176,7 @@ class _LoyaltyPointsScreenState extends State<LoyaltyPointsScreen> {
                       Text(
                         'Member since ${customerInfo.memberSince}',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                           fontSize: 12,
                         ),
                       ),

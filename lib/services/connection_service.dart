@@ -25,14 +25,8 @@ class ConnectionService {
   }
 
   /// Test connectivity to the backend server
-  static Future<String?> findWorkingBackendUrl() async {
-    print('[DEBUG] ConnectionService: Testing backend connectivity...');
-
-    for (String baseUrl in _testUrls) {
-      try {
-        print('[DEBUG] ConnectionService: Testing URL: $baseUrl');
-
-        final response = await http
+  static Future<String?> findWorkingBackendUrl() async {for (String baseUrl in _testUrls) {
+      try {final response = await http
             .get(
               Uri.parse(baseUrl),
               headers: {
@@ -40,27 +34,12 @@ class ConnectionService {
                 'Accept': 'application/json',
               },
             )
-            .timeout(_defaultTimeout);
-
-        print(
-          '[DEBUG] ConnectionService: Response from $baseUrl: ${response.statusCode}',
-        );
-
-        // If we get any response (even 404), the server is reachable
-        if (response.statusCode < 500) {
-          print(
-            '[SUCCESS] ConnectionService: Found working backend at: $baseUrl',
-          );
-          return baseUrl;
+            .timeout(_defaultTimeout);// If we get any response (even 404), the server is reachable
+        if (response.statusCode < 500) {return baseUrl;
         }
-      } catch (e) {
-        print('[ERROR] ConnectionService: Failed to connect to $baseUrl: $e');
-        continue;
+      } catch (e) {continue;
       }
-    }
-
-    print('[ERROR] ConnectionService: No working backend URL found');
-    return null;
+    }return null;
   }
 
   /// Check if the backend is running and accessible
@@ -68,20 +47,14 @@ class ConnectionService {
     // Use cached result if recent check was successful
     if (_lastSuccessfulCheck != null &&
         DateTime.now().difference(_lastSuccessfulCheck!) <
-            _cacheValidDuration) {
-      print(
-        '[DEBUG] ConnectionService: Using cached successful connection result',
-      );
-      return true;
+            _cacheValidDuration) {return true;
     }
 
     final workingUrl = await findWorkingBackendUrl();
     final isAvailable = workingUrl != null;
 
     if (isAvailable) {
-      _lastSuccessfulCheck = DateTime.now();
-      print('[DEBUG] ConnectionService: Backend available, caching result');
-    }
+      _lastSuccessfulCheck = DateTime.now();}
 
     return isAvailable;
   }
@@ -142,10 +115,7 @@ class ConnectionService {
     required String username,
     required String password,
     String? customBackendUrl,
-  }) async {
-    print('[DEBUG] ConnectionService: Starting login test...');
-
-    Map<String, dynamic> result = {
+  }) async {Map<String, dynamic> result = {
       'success': false,
       'error': null,
       'statusCode': null,

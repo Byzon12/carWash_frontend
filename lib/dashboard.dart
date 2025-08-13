@@ -44,14 +44,8 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // Test connectivity when the app starts
-  Future<void> _testConnectivityOnStart() async {
-    print('[DEBUG] Dashboard: Testing backend connectivity...');
-    final isConnected = await ApiConnect.testConnectivity();
-    if (isConnected) {
-      print('[SUCCESS] Dashboard: Backend connection successful!');
-    } else {
-      print('[ERROR] Dashboard: Backend connection failed!');
-    }
+  Future<void> _testConnectivityOnStart() async {final isConnected = await ApiConnect.testConnectivity();
+    if (isConnected) {} else {}
   }
 
   double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
@@ -471,7 +465,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.blue.withOpacity(0.3),
+                      color: Colors.blue.withValues(alpha: 0.3),
                       spreadRadius: 2,
                       blurRadius: 5,
                       offset: const Offset(0, 3),
@@ -485,9 +479,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       // Google Maps Widget
                       GoogleMap(
                         onMapCreated: (GoogleMapController controller) {
-                          _mapController = controller;
-                          print('[DEBUG] Google Maps initialized successfully');
-                          setState(() {
+                          _mapController = controller;setState(() {
                             _mapLoading = false;
                           });
                           // If we already have user location, center on it
@@ -788,18 +780,11 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // Debug method to test API connectivity directly
-  Future<void> _testApiDirectly() async {
-    print('[DEBUG] Dashboard: Testing API connectivity directly...');
-
-    try {
+  Future<void> _testApiDirectly() async {try {
       // Import the API connect to test directly
       final response = await ApiConnect.getLocations();
 
-      if (response != null) {
-        print('[DEBUG] Dashboard: API Response Status: ${response.statusCode}');
-        print('[DEBUG] Dashboard: API Response Body: ${response.body}');
-
-        if (mounted) {
+      if (response != null) {if (mounted) {
           showDialog(
             context: context,
             builder:
@@ -840,9 +825,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
           );
         }
-      } else {
-        print('[DEBUG] Dashboard: API Response is null');
-        if (mounted) {
+      } else {if (mounted) {
           showDialog(
             context: context,
             builder:
@@ -861,9 +844,7 @@ class _DashboardPageState extends State<DashboardPage> {
           );
         }
       }
-    } catch (e) {
-      print('[DEBUG] Dashboard: API Test Exception: $e');
-      if (mounted) {
+    } catch (e) {if (mounted) {
         showDialog(
           context: context,
           builder:

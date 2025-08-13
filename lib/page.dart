@@ -2,16 +2,11 @@ import 'models/cars.dart';
 import 'services/carwash_service.dart';
 
 // Function to get car washes dynamically from API
-Future<List<CarWash>> getCarWashes() async {
-  print('[DEBUG] page.dart: Starting to fetch car washes from API...');
-  return await CarWashService.fetchCarWashes();
+Future<List<CarWash>> getCarWashes() async {return await CarWashService.fetchCarWashes();
 }
 
 // Legacy hardcoded data for reference/testing (can be removed later)
-List<CarWash> getLegacyCarWashes() {
-  print('[DEBUG] page.dart: Using legacy hardcoded car wash data');
-
-  final List<Service> SparkleWashServices = [
+List<CarWash> getLegacyCarWashes() {final List<Service> SparkleWashServices = [
     Service(
       id: '1',
       name: 'Exterior Car Washing',

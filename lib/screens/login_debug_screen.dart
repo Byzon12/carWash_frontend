@@ -31,9 +31,7 @@ class _LoginDebugScreenState extends State<LoginDebugScreen> {
   void _addToLog(String message) {
     setState(() {
       _debugLog += '${DateTime.now().toString().substring(11, 19)}: $message\n';
-    });
-    print('[DEBUG_SCREEN] $message');
-  }
+    });}
 
   Future<void> _runNetworkDiagnostics() async {
     setState(() {

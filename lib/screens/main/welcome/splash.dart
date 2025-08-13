@@ -37,37 +37,30 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
 
     if (!mounted) return;
 
-    try {
-      print('[DEBUG] Splash: Checking authentication status...');
-      final isLoggedIn = await ApiConnect.isLoggedIn();
-      print('[DEBUG] Splash: Is user logged in? $isLoggedIn');
+    try {final isLoggedIn = await ApiConnect.isLoggedIn();if (isLoggedIn) {// User is already logged in, go directly to home using named route
+        if (mounted) {
 
-      if (isLoggedIn) {
-        print('[DEBUG] Splash: User is logged in, navigating to home...');
-        // User is already logged in, go directly to home using named route
-        Navigator.of(context).pushNamedAndRemoveUntil(
+          Navigator.of(context).pushNamedAndRemoveUntil(
           '/home',
           (route) => false, // Remove all previous routes
         );
-        print('[DEBUG] Splash: Navigation to home completed');
-      } else {
-        print('[DEBUG] Splash: User not logged in, showing welcome screen...');
-        // User not logged in, show welcome screen
-        Navigator.of(context).pushReplacement(
+
+        }} else {// User not logged in, show welcome screen
+        if (mounted) {
+
+          Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const WelcomeScreen()),
         );
-        print('[DEBUG] Splash: Navigation to welcome completed');
-      }
-    } catch (e, stackTrace) {
-      print('[ERROR] Splash: Exception checking auth: $e');
-      print('[ERROR] Splash: Stack trace: $stackTrace');
 
-      // If there's an error checking auth, default to welcome screen
-      Navigator.of(context).pushReplacement(
+        }}
+    } catch (e, stackTrace) {// If there's an error checking auth, default to welcome screen
+      if (mounted) {
+
+        Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const WelcomeScreen()),
       );
-      print('[DEBUG] Splash: Fallback navigation to welcome completed');
-    }
+
+      }}
   }
 
   @override

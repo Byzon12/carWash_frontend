@@ -58,7 +58,7 @@ class CarWashApp extends StatelessWidget {
         color: colorScheme.surface,
         elevation: 6,
         margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-        shadowColor: Colors.black.withOpacity(0.2),
+        shadowColor: Colors.black.withValues(alpha: 0.2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
 
@@ -76,8 +76,8 @@ class CarWashApp extends StatelessWidget {
         ),
         bodyMedium: TextStyle(color: colorScheme.onSurfaceVariant),
       ),
-      splashColor: colorScheme.secondary.withOpacity(0.3),
-      highlightColor: colorScheme.secondary.withOpacity(0.1),
+      splashColor: colorScheme.secondary.withValues(alpha: 0.3),
+      highlightColor: colorScheme.secondary.withValues(alpha: 0.1),
     );
 
     return MultiProvider(
@@ -89,9 +89,7 @@ class CarWashApp extends StatelessWidget {
         initialRoute: '/',
         routes: {
           '/': (context) => const Splash(),
-          '/home': (context) {
-            print('[DEBUG] Route: Navigating to HomePage');
-            return const HomePage();
+          '/home': (context) {return const HomePage();
           },
           '/login': (context) => LoginForm(),
           '/backend-test': (context) => const BackendTestScreen(),

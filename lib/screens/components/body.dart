@@ -23,7 +23,7 @@ class Background extends StatelessWidget {
             width: double.infinity,
             height: double.infinity,
           ),
-          Container(color: Colors.black.withOpacity(overlayOpacity)),
+          Container(color: Colors.black.withValues(alpha: overlayOpacity)),
           child,
         ],
       ),

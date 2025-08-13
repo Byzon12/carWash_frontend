@@ -50,8 +50,6 @@ class _LoginFormState extends State<LoginForm> {
 
   // Helper method to test route navigation
   void _testNavigation() async {
-    print('[DEBUG] LoginForm: Testing navigation to /home...');
-
     // Show testing message
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -80,10 +78,7 @@ class _LoginFormState extends State<LoginForm> {
 
     try {
       Navigator.of(context).pushReplacementNamed('/home');
-      print('[DEBUG] LoginForm: Navigation test successful!');
     } catch (e) {
-      print('[DEBUG] LoginForm: Navigation test failed: $e');
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -109,9 +104,6 @@ class _LoginFormState extends State<LoginForm> {
 
   // Enhanced method to parse server error messages
   String _parseServerError(int statusCode, String responseBody) {
-    print('[DEBUG] LoginForm: Parsing server error - Status: $statusCode');
-    print('[DEBUG] LoginForm: Response body: $responseBody');
-
     String errorMsg = 'Login failed!';
 
     // Default messages for status codes
@@ -147,8 +139,6 @@ class _LoginFormState extends State<LoginForm> {
     // Try to parse JSON response for more specific error messages
     try {
       final data = jsonDecode(responseBody);
-      print('[DEBUG] LoginForm: Parsed JSON response: $data');
-
       if (data is Map) {
         // Common error message fields from Django REST framework
         if (data.containsKey('detail')) {
@@ -191,7 +181,6 @@ class _LoginFormState extends State<LoginForm> {
         }
       }
     } catch (e) {
-      print('[ERROR] LoginForm: Error parsing JSON response: $e');
       // Keep the default error message based on status code
       errorMsg += ' Please try again.';
     }
@@ -239,11 +228,6 @@ class _LoginFormState extends State<LoginForm> {
 
   // Enhanced method to parse password reset error messages
   String _parsePasswordResetError(int statusCode, String responseBody) {
-    print(
-      '[DEBUG] LoginForm: Parsing password reset error - Status: $statusCode',
-    );
-    print('[DEBUG] LoginForm: Response body: $responseBody');
-
     String errorMsg = 'Failed to send reset link';
 
     // Default messages for status codes
@@ -273,8 +257,6 @@ class _LoginFormState extends State<LoginForm> {
     // Try to parse JSON response for more specific error messages
     try {
       final data = jsonDecode(responseBody);
-      print('[DEBUG] LoginForm: Parsed password reset JSON response: $data');
-
       if (data is Map) {
         if (data.containsKey('detail')) {
           errorMsg = _formatPasswordResetErrorMessage(data['detail']);
@@ -289,11 +271,7 @@ class _LoginFormState extends State<LoginForm> {
           }
         }
       }
-    } catch (e) {
-      print(
-        '[ERROR] LoginForm: Error parsing password reset JSON response: $e',
-      );
-    }
+    } catch (e) {}
 
     return errorMsg;
   }
@@ -330,7 +308,6 @@ class _LoginFormState extends State<LoginForm> {
 
   void _submit() async {
     print('[DEBUG] LoginForm: _submit() called');
-    print('[DEBUG] LoginForm: Current context: $context');
     print('[DEBUG] LoginForm: Navigator canPop: ${Navigator.canPop(context)}');
 
     // Clear previous error state
@@ -340,7 +317,6 @@ class _LoginFormState extends State<LoginForm> {
     });
 
     if (_formKey.currentState!.validate()) {
-      print('[DEBUG] LoginForm: Form validation passed');
       setState(() {
         _isLoading = true;
         _loginSuccess = false; // Reset success state
@@ -350,46 +326,24 @@ class _LoginFormState extends State<LoginForm> {
         final input = _emailOrUsernameController.text.trim();
         final password = _passwordController.text;
         final isEmail = input.contains('@');
-
-        print('[DEBUG] LoginForm: Attempting login with input: $input');
-        print('[DEBUG] LoginForm: Is email? $isEmail');
-
         final response = await ApiConnect.login(
           username: isEmail ? null : input,
           email: isEmail ? input : null,
           password: password,
         );
-
-        print('🔍 Login response status: ${response.statusCode}');
-        print('🔍 Login response body: ${response.body}');
         if (response.statusCode == 200 || response.statusCode == 201) {
-          print('✅ Login successful! Setting success state and navigating...');
           setState(() {
             _loginSuccess = true;
             _showError = false;
             _errorMessage = null;
             _isLoading = false; // Stop loading to show success message
           });
-
-          print('🔍 Success state set to: $_loginSuccess');
-          print('🔍 Loading state: $_isLoading');
-          print('🔍 Error state: $_showError');
-
           // User data is already stored by ApiConnect.login() method
-          print(
-            '📱 User data stored by API method, proceeding with navigation...',
-          );
-
           // First navigate to home screen immediately
           if (mounted) {
-            print('🏠 Navigating to home screen...');
             print('🔍 Current route: ${ModalRoute.of(context)?.settings.name}');
-            print('🔍 Login success state: $_loginSuccess');
-
             try {
               // Simple navigation to home
-              print('🧪 Attempting navigation to /home...');
-
               // Show success message before navigation
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -414,34 +368,20 @@ class _LoginFormState extends State<LoginForm> {
 
               // Navigate to home first
               Navigator.of(context).pushReplacementNamed('/home');
-              print('🎯 Navigation to home completed successfully!');
-
               // Request location permission AFTER navigation (non-blocking)
-              print('📍 Scheduling location permission request...');
               Future.delayed(const Duration(milliseconds: 1500), () async {
                 if (mounted) {
                   try {
                     await LocationHelper.requestLocationPermission(context);
-                    print('📍 Location permission request completed');
-                  } catch (e) {
-                    print('📍 Location permission request failed: $e');
-                  }
+                  } catch (e) {}
                 }
               });
             } catch (e, stackTrace) {
-              print('❌ Navigation error: $e');
-              print('❌ Stack trace: $stackTrace');
-
               // Fallback: try pushNamedAndRemoveUntil
               try {
-                print(
-                  '🔄 Trying fallback navigation with pushNamedAndRemoveUntil...',
-                );
                 Navigator.of(
                   context,
                 ).pushNamedAndRemoveUntil('/home', (route) => false);
-                print('🔄 Fallback navigation completed!');
-
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -462,18 +402,12 @@ class _LoginFormState extends State<LoginForm> {
                   );
                 }
               } catch (fallbackError, fallbackTrace) {
-                print('❌ Fallback navigation failed: $fallbackError');
-                print('❌ Fallback stack trace: $fallbackTrace');
-
                 // Final fallback: try direct route construction
                 try {
-                  print('🔄 Trying direct navigation...');
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (context) => const HomePage()),
                     (route) => false,
                   );
-                  print('🔄 Direct navigation completed!');
-
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -494,8 +428,6 @@ class _LoginFormState extends State<LoginForm> {
                     );
                   }
                 } catch (directError) {
-                  print('❌ Direct navigation failed: $directError');
-
                   // Show error to user
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -541,9 +473,7 @@ class _LoginFormState extends State<LoginForm> {
                                 '/home',
                                 (route) => false,
                               );
-                            } catch (e) {
-                              print('❌ Manual navigation also failed: $e');
-                            }
+                            } catch (e) {}
                           },
                         ),
                       ),
@@ -552,23 +482,13 @@ class _LoginFormState extends State<LoginForm> {
                 }
               }
             }
-          } else {
-            print('⚠️ Widget not mounted, skipping navigation');
-          }
+          } else {}
         } else {
-          print(
-            '[ERROR] LoginForm: Login failed with status: ${response.statusCode}',
-          );
-          print('[ERROR] LoginForm: Response body: ${response.body}');
-
           // Use enhanced error parsing method
           String errorMsg = _parseServerError(
             response.statusCode,
             response.body,
           );
-
-          print('[DEBUG] LoginForm: Final error message: $errorMsg');
-
           // Set error state for inline display
           setState(() {
             _errorMessage = errorMsg;
@@ -577,7 +497,6 @@ class _LoginFormState extends State<LoginForm> {
 
           // Enhanced SnackBar with better styling
           if (mounted) {
-            print('[DEBUG] LoginForm: Showing enhanced error SnackBar');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Row(
@@ -613,22 +532,14 @@ class _LoginFormState extends State<LoginForm> {
                   textColor: Colors.white,
                   backgroundColor: Colors.red.shade500,
                   onPressed: () {
-                    print('[DEBUG] LoginForm: Retry button pressed');
                     _submit();
                   },
                 ),
               ),
             );
-          } else {
-            print(
-              '[WARNING] LoginForm: Widget not mounted, cannot show SnackBar',
-            );
-          }
+          } else {}
         }
       } catch (e, stackTrace) {
-        print('[ERROR] LoginForm: Login exception: $e');
-        print('[ERROR] LoginForm: Stack trace: $stackTrace');
-
         // Set connection error state
         setState(() {
           _errorMessage =
@@ -638,9 +549,6 @@ class _LoginFormState extends State<LoginForm> {
 
         // Enhanced connection error SnackBar
         if (mounted) {
-          print(
-            '[DEBUG] LoginForm: Showing enhanced connection error SnackBar',
-          );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -679,24 +587,16 @@ class _LoginFormState extends State<LoginForm> {
                 textColor: Colors.white,
                 backgroundColor: Colors.orange.shade500,
                 onPressed: () {
-                  print(
-                    '[DEBUG] LoginForm: Retry button pressed from exception handler',
-                  );
                   _submit(); // Retry login
                 },
               ),
             ),
           );
-        } else {
-          print(
-            '[WARNING] LoginForm: Widget not mounted, cannot show connection error SnackBar',
-          );
-        }
+        } else {}
       } finally {
         setState(() => _isLoading = false);
       }
     } else {
-      print('[DEBUG] LoginForm: Form validation failed');
       // Set validation error state
       setState(() {
         _errorMessage = 'Please fill in all required fields correctly';
@@ -1226,7 +1126,7 @@ class _LoginFormState extends State<LoginForm> {
                   borderRadius: BorderRadius.circular(12.0),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.green.withOpacity(0.3),
+                      color: Colors.green.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),

@@ -18,15 +18,10 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void initState() {
-    super.initState();
-    print('[DEBUG] HomePage: HomePage initialized successfully');
-  }
+    super.initState();}
 
   @override
-  Widget build(BuildContext context) {
-    print('[DEBUG] HomePage: Building HomePage UI');
-
-    final pages = [
+  Widget build(BuildContext context) {final pages = [
       DashboardPage(
         onBook: (booking) {
           // Handle booking if needed - you can use the CartProvider here
